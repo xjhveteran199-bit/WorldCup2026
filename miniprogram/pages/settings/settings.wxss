@@ -1,0 +1,9 @@
+.row { margin: 24rpx 0; }
+.label { font-size: 26rpx; color: #c49b8b; margin-bottom: 10rpx; }
+.apply { color: #ff8a5e; font-size: 24rpx; margin-left: 10rpx; }
+.sel { background: #19090b; border: 1rpx solid #4a2520; border-radius: 16rpx; padding: 22rpx 18rpx;
+  font-size: 28rpx; color: #fdeee4; }
+.status { font-size: 24rpx; margin-top: 12rpx; }
+.status.ok { color: #5ad18a; }
+.status.err { color: #ff6b6b; }
+.status.wait { color: #ffd34d; }

@@ -1,0 +1,27 @@
+<view class="wrap">
+  <view class="card">
+    <view class="card-h">🏆 冠军模拟器</view>
+    <view class="hint" style="margin-bottom:18rpx">蒙特卡洛法完整模拟整届世界杯（已赛比分锁定）：72 场小组赛 → 32 强 → 决赛，重复一万届，统计每队夺冠频率。</view>
+    <button class="btn" disabled="{{running}}" bindtap="runSim">{{running ? '🎲 模拟中…' : (done ? '🎲 再模拟 10000 届' : '🎲 模拟 10000 届世界杯')}}</button>
+    <view class="progress" wx:if="{{running}}"><view class="progress-bar" style="width:{{progress}}%"></view></view>
+  </view>
+
+  <view class="card" wx:if="{{done}}">
+    <view class="card-h">👑 夺冠概率排行 <text class="tag">{{meta}}</text></view>
+    <view class="rank" wx:for="{{ranks}}" wx:key="rank">
+      <text class="rk {{item.top3?'gold':''}}">{{item.rank}}</text>
+      <text class="rf">{{item.flag}}</text>
+      <text class="rn">{{item.zh}}</text>
+      <view class="rbar"><view class="rfill" style="width:{{item.width}}%"></view></view>
+      <text class="rp">{{item.pct}}%</text>
+    </view>
+    <button class="btn btn-ghost" style="margin-top:20rpx" bindtap="makeCard">📸 生成夺冠榜分享卡片</button>
+    <view class="share-box" wx:if="{{sharePath}}">
+      <image src="{{sharePath}}" mode="widthFix" class="share-img"></image>
+      <button class="btn btn-ghost" bindtap="saveCard">⬇️ 保存到相册</button>
+      <view class="hint" style="text-align:center;margin-top:10rpx">「AI 模拟一万届世界杯」是天然爆款选题 📕</view>
+    </view>
+  </view>
+
+  <view class="disclaimer">小组第三晋级落位为简化规则，对冠军概率影响极小。预测仅供娱乐参考。</view>
+</view>

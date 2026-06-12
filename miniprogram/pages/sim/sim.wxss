@@ -1,0 +1,14 @@
+.progress { height: 16rpx; background: #19090b; border-radius: 8rpx; overflow: hidden; margin-top: 20rpx; }
+.progress-bar { height: 100%; background: linear-gradient(90deg,#ff2d2e,#ffae00); border-radius: 8rpx; transition: width .2s; }
+
+.rank { display: flex; align-items: center; gap: 14rpx; margin: 14rpx 0; }
+.rk { width: 40rpx; color: #c49b8b; font-size: 24rpx; text-align: center; }
+.rk.gold { color: #ffd34d; font-weight: 800; }
+.rf { width: 48rpx; font-size: 36rpx; text-align: center; }
+.rn { width: 140rpx; font-size: 28rpx; }
+.rbar { flex: 1; height: 28rpx; background: #19090b; border-radius: 14rpx; overflow: hidden; }
+.rfill { height: 100%; background: linear-gradient(90deg,#ff2d2e,#ffae00); border-radius: 14rpx; transition: width .8s; }
+.rp { width: 90rpx; text-align: right; color: #ffae00; font-weight: 700; font-size: 26rpx; }
+
+.share-box { text-align: center; margin-top: 16rpx; }
+.share-img { width: 75%; border-radius: 20rpx; border: 1rpx solid #4a2520; margin-bottom: 16rpx; }

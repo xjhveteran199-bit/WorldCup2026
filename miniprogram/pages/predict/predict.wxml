@@ -1,0 +1,134 @@
+<view class="wrap">
+  <view class="head">
+    <view class="logo">🐙 <text class="logo-grad">硅基看球</text></view>
+    <view class="tagline">碳基看球，硅基算球 · 统计 × 大模型双引擎</view>
+    <view class="live-chip">⚽ 2026 世界杯 · 开战中 LIVE</view>
+    <view class="gear" bindtap="goSettings">⚙️ AI</view>
+  </view>
+
+  <!-- 对阵选择 -->
+  <view class="card">
+    <view class="card-h">⚔️ 选择对阵</view>
+    <view class="vs-row">
+      <view class="side">
+        <view class="flag">{{aFlag}}</view>
+        <picker range="{{teamList}}" range-key="label" value="{{idxA}}" bindchange="onPickA">
+          <view class="picker">{{aZh}} ▾</view>
+        </picker>
+        <view class="meta">{{aMeta}}</view>
+      </view>
+      <view class="vs">VS</view>
+      <view class="side">
+        <view class="flag">{{bFlag}}</view>
+        <picker range="{{teamList}}" range-key="label" value="{{idxB}}" bindchange="onPickB">
+          <view class="picker">{{bZh}} ▾</view>
+        </picker>
+        <view class="meta">{{bMeta}}</view>
+      </view>
+    </view>
+    <view class="mode-row">
+      <view class="mode {{!knockout?'on':''}}" data-ko="0" bindtap="setMode">小组赛</view>
+      <view class="mode {{knockout?'on':''}}" data-ko="1" bindtap="setMode">淘汰赛(含点球)</view>
+    </view>
+    <button class="btn" bindtap="predict">🔥 开赛！立即预测</button>
+  </view>
+
+  <block wx:if="{{result}}">
+    <!-- 统计预测 -->
+    <view class="card">
+      <view class="card-h">📊 统计模型预测 <text class="tag">Elo+双泊松+DC</text></view>
+      <view class="prob-bar">
+        <view class="seg w" style="width:{{result.wWidth}}%">{{result.pW}}</view>
+        <view class="seg d" style="width:{{result.dWidth}}%">{{result.pD}}</view>
+        <view class="seg l" style="width:{{result.lWidth}}%">{{result.pL}}</view>
+      </view>
+      <view class="prob-legend">
+        <text>{{aZh}} 胜</text><text>平</text><text>{{bZh}} 胜</text>
+      </view>
+      <view class="big-wrap">
+        <view class="big-score">{{result.bigScore}}</view>
+        <view class="big-lab">模型最可能比分</view>
+      </view>
+      <view class="top-scores">
+        <view class="ts" wx:for="{{result.topScores}}" wx:key="s">{{item.s}} <text class="ts-p">{{item.p}}</text></view>
+      </view>
+      <view class="ko-line" wx:if="{{result.koLine}}">{{result.koLine}}</view>
+    </view>
+
+    <!-- 热力图 -->
+    <view class="card">
+      <view class="card-h">🌡️ 比分概率热力图</view>
+      <view class="heat">
+        <view class="heat-row">
+          <view class="hc hh">{{aFlag}}\{{bFlag}}</view>
+          <view class="hc hh" wx:for="{{[0,1,2,3,4,5]}}" wx:key="*this">{{item}}</view>
+        </view>
+        <view class="heat-row" wx:for="{{result.heat}}" wx:for-index="x" wx:key="x">
+          <view class="hc hh">{{x}}</view>
+          <view class="hc" wx:for="{{item}}" wx:for-item="cell" wx:for-index="y" wx:key="y" style="background:{{cell.col}}">{{cell.v}}</view>
+        </view>
+      </view>
+      <view class="hint" style="text-align:center">行={{aZh}}进球 · 列={{bZh}}进球 · 越亮概率越高</view>
+    </view>
+
+    <!-- 六维对比 -->
+    <view class="card">
+      <view class="card-h">📐 六维实力对比</view>
+      <view class="dim" wx:for="{{result.dims}}" wx:key="name">
+        <view class="dim-name">{{item.name}}</view>
+        <view class="dim-bars">
+          <view class="dim-bar-l"><view class="fill-a" style="width:{{item.a}}%"></view></view>
+          <view class="dim-vs"></view>
+          <view class="dim-bar-r"><view class="fill-b" style="width:{{item.b}}%"></view></view>
+        </view>
+        <view class="dim-val"><text class="va">{{item.a}}</text><text class="vb">{{item.b}}</text></view>
+      </view>
+      <view class="dim-legend"><text class="da">● {{aZh}}</text><text class="db">● {{bZh}}</text></view>
+    </view>
+
+    <!-- 因子 -->
+    <view class="card">
+      <view class="card-h">🧮 修正因子明细 <text class="tag">透明可复现</text></view>
+      <view class="factor" wx:for="{{result.factors}}" wx:key="k">
+        <text class="fk">{{item.k}}</text><text class="fv {{item.cls}}">{{item.v}}</text>
+      </view>
+    </view>
+
+    <!-- AI 分析 -->
+    <view class="card">
+      <view class="card-h">🤖 AI 战术分析 <text class="tag">{{aiTag}}</text></view>
+      <block wx:if="{{aiState==='idle'}}">
+        <view class="hint" style="margin-bottom:16rpx">填入国产大模型 Key（DeepSeek/Kimi/智谱/通义/MiniMax），解锁阵型相克、教练斗法、关键对位分析。</view>
+        <textarea class="intel" placeholder="（可选）粘贴最新情报：首发、伤病、天气…" value="{{intel}}" bindinput="onIntel" maxlength="300"></textarea>
+        <button class="btn btn-ghost" style="margin-top:16rpx" bindtap="runAI">启动 AI 分析</button>
+      </block>
+      <view wx:if="{{aiState==='running'}}" class="ai-loading">🐙 章鱼正在研究战术板…</view>
+      <view wx:if="{{aiState==='error'}}" class="ai-err">❌ {{aiErr}}<view class="hint">可在「我的→AI设置」换个渠道重试</view></view>
+      <block wx:if="{{aiState==='done'}}">
+        <view class="ai-sec" wx:for="{{aiSections}}" wx:key="h">
+          <view class="ai-h" wx:if="{{item.h}}">{{item.h}}</view>
+          <view class="ai-body">{{item.body}}</view>
+        </view>
+        <view class="ai-quote" wx:if="{{aiQuote}}">
+          🐙 <text class="q">{{aiQuote}}</text>
+          <view class="q-meta">AI 预测 {{aiScore}} · 信心 {{aiConfidence}}%</view>
+        </view>
+        <view class="fuse" wx:if="{{fused}}">双引擎融合：{{aZh}}胜 {{fused.pW}} · 平 {{fused.pD}} · {{bZh}}胜 {{fused.pL}}（修正 {{fused.adj}}：{{aiReason}}）</view>
+      </block>
+    </view>
+
+    <!-- 分享卡片 -->
+    <button class="btn" style="margin:16rpx 0" bindtap="makeCard">📸 生成小红书分享卡片</button>
+    <view class="share-box" wx:if="{{sharePath}}">
+      <image src="{{sharePath}}" mode="widthFix" class="share-img"></image>
+      <button class="btn btn-ghost" bindtap="saveCard">⬇️ 保存到相册</button>
+      <view class="hint" style="text-align:center;margin-top:10rpx">保存后发小红书 📕 · 右上角「···」可转发好友</view>
+    </view>
+  </block>
+
+  <view class="disclaimer">
+    <view>🐙 硅基看球 · 碳基看球，硅基算球</view>
+    <view>数据：Elo 2026-06-10 · 小红书 <text class="em">@碳化硅SiC</text></view>
+    <view>预测仅供娱乐参考，不构成任何竞彩建议。理性看球，热爱足球。</view>
+  </view>
+</view>

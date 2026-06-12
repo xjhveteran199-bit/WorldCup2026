@@ -1,0 +1,18 @@
+{
+  "description": "硅基看球 - 2026美加墨世界杯AI预测",
+  "packOptions": { "ignore": [], "include": [] },
+  "setting": {
+    "urlCheck": true,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true,
+    "newFeature": true,
+    "bigPackageSizeSupport": true
+  },
+  "compileType": "miniprogram",
+  "libVersion": "3.5.5",
+  "appid": "touristappid",
+  "projectname": "guijikanqiu-worldcup2026",
+  "miniprogramRoot": "./"
+}

@@ -1,0 +1,32 @@
+{
+  "pages": [
+    "pages/predict/predict",
+    "pages/fixtures/fixtures",
+    "pages/sim/sim",
+    "pages/doc/doc",
+    "pages/settings/settings"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#120608",
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "硅基看球",
+    "backgroundColor": "#120608",
+    "backgroundTextStyle": "dark",
+    "enablePullDownRefresh": false
+  },
+  "tabBar": {
+    "color": "#c49b8b",
+    "selectedColor": "#ff7a1f",
+    "backgroundColor": "#1a0a0c",
+    "borderStyle": "black",
+    "list": [
+      { "pagePath": "pages/predict/predict", "text": "预测" },
+      { "pagePath": "pages/fixtures/fixtures", "text": "赛程" },
+      { "pagePath": "pages/sim/sim", "text": "冠军模拟" },
+      { "pagePath": "pages/doc/doc", "text": "模型" }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

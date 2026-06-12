@@ -1,0 +1,12 @@
+.day-h { color: #ffd34d; font-size: 26rpx; font-weight: 700; margin: 26rpx 0 10rpx; padding-left: 6rpx; }
+.day-h.today { color: #ff7a1f; }
+.fx { display: flex; align-items: center; background: #221012; border: 1rpx solid #4a2520;
+  border-radius: 18rpx; padding: 18rpx 20rpx; margin: 10rpx 0; gap: 10rpx; }
+.fx.played { border-color: rgba(255,211,77,.4); }
+.fx-time { color: #c49b8b; font-size: 20rpx; width: 90rpx; flex-shrink: 0; line-height: 1.4; }
+.fx-v { font-size: 18rpx; color: #8a625a; }
+.fx-nm { flex: 1; font-size: 26rpx; }
+.fx-nm.right { text-align: right; }
+.fx-mid { font-weight: 800; color: #ff7a1f; font-size: 26rpx; padding: 0 6rpx; min-width: 70rpx; text-align: center; }
+.fx-mid.res { color: #ffd34d; }
+.fx-g { font-size: 18rpx; color: #c49b8b; background: #19090b; border-radius: 8rpx; padding: 2rpx 8rpx; flex-shrink: 0; }

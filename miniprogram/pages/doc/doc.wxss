@@ -1,0 +1,5 @@
+.doc .dh { color: #ff8a5e; font-size: 28rpx; font-weight: 800; margin: 24rpx 0 8rpx; }
+.doc .dh.warn { color: #ffd34d; }
+.doc .dp { font-size: 26rpx; line-height: 1.8; color: #d8c4b8; }
+.formula { background: #19090b; border: 1rpx solid #4a2520; border-radius: 14rpx; padding: 18rpx;
+  text-align: center; font-style: italic; color: #ffd34d; font-size: 30rpx; margin: 14rpx 0; }

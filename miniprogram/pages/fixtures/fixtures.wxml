@@ -1,0 +1,20 @@
+<view class="wrap">
+  <view class="card">
+    <view class="card-h">📅 完整赛程（北京时间）</view>
+    <view class="hint">点击任意对阵直接生成预测 · 金色 = 已赛结果</view>
+  </view>
+
+  <view wx:for="{{days}}" wx:key="day" wx:for-item="d">
+    <view class="day-h {{d.isToday?'today':''}}">{{d.label}}</view>
+    <view class="fx {{m.played?'played':''}}" wx:for="{{d.matches}}" wx:for-item="m" wx:key="n"
+          data-h="{{m.h}}" data-a="{{m.a}}" bindtap="toPredict">
+      <view class="fx-time">{{m.time}}<view class="fx-v">{{m.v}}</view></view>
+      <view class="fx-nm right">{{m.hZh}} {{m.hFlag}}</view>
+      <view class="fx-mid {{m.played?'res':''}}">{{m.mid}}</view>
+      <view class="fx-nm">{{m.aFlag}} {{m.aZh}}</view>
+      <view class="fx-g">{{m.g}}</view>
+    </view>
+  </view>
+
+  <view class="disclaimer">预测仅供娱乐参考，不构成任何竞彩建议。</view>
+</view>

@@ -1,0 +1,30 @@
+<view class="wrap">
+  <view class="card doc">
+    <view class="card-h">🔬 预测模型方法论</view>
+
+    <view class="dh">① Elo 评分体系</view>
+    <view class="dp">采用 eloratings.net 世界足球 Elo 评分（基线 {{eloDate}}）。Elo 源自国际象棋，每场赛后按胜负、比分差、赛事权重动态更新，比 FIFA 排名更灵敏。两队胜负期望：</view>
+    <view class="formula">Wₑ = 1 / (1 + 10^(−Δ/400))</view>
+    <view class="dp">Δ = 基础Elo差 + 东道主加成(+100，美加墨) + 近期状态修正(±50封顶)。</view>
+
+    <view class="dh">② 双泊松进球模型</view>
+    <view class="dp">进球数近似服从泊松分布，把 Elo 差映射为期望进球：</view>
+    <view class="formula">λ = 1.30 × e^(0.0011·Δ)</view>
+    <view class="dp">由 λ 生成 9×9 比分概率矩阵，求和得胜/平/负与最可能比分。淘汰赛进球 ×0.90，平局按点球模型分配晋级。</view>
+
+    <view class="dh">③ Dixon-Coles 低比分修正</view>
+    <view class="dp">经典泊松会低估 0-0/1-1 等低比分。Dixon & Coles (1997) 对低比分格子做相关性修正，本模型 ρ = −0.13。</view>
+
+    <view class="dh">④ 大模型战术层（可选 · 自带 Key）</view>
+    <view class="dp">统计模型看不见「阵型相克」「教练博弈」「更衣室状态」。填入你自己的国产大模型 API Key 后，AI 基于阵容、战术、教练与最新情报输出定性分析，并对统计概率做有界修正（每项 ≤ ±8 个百分点），两套结果并排展示。AI 内容由你的自有密钥生成。</view>
+
+    <view class="dh">⑤ 冠军模拟器</view>
+    <view class="dp">蒙特卡洛法：按模型给每场比分矩阵采样，完整走完小组赛→32强→决赛，重复一万次统计夺冠频率。已赛场次锁定真实比分。</view>
+
+    <view class="dh warn">⚠️ 数据与局限</view>
+    <view class="dp">「近期状态」为编辑评估值。模型无法预知红牌、伤病和裁判——这正是足球的魅力。本工具为数据娱乐产品，预测仅供参考，不构成任何竞彩或投注建议。</view>
+
+    <button class="btn btn-ghost" style="margin-top:24rpx" bindtap="goSettings">⚙️ 配置 AI 大模型</button>
+  </view>
+  <view class="disclaimer">🐙 硅基看球 · 小红书 <text class="em">@碳化硅SiC</text></view>
+</view>

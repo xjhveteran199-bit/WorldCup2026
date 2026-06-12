@@ -1,0 +1,38 @@
+/* 硅基看球 · 全局热血风样式 */
+page {
+  --bg: #120608; --bg2: #1e0c0e; --card: #221012; --card2: #2e1614;
+  --line: #4a2520; --txt: #fdeee4; --sub: #c49b8b;
+  --amber: #ffae00; --blue: #3da5ff; --gold: #ffd34d; --fire: #ff3d2e;
+  background: #120608;
+  color: #fdeee4;
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  min-height: 100vh;
+}
+.wrap { padding: 24rpx 28rpx 40rpx; }
+.head { text-align: center; padding: 20rpx 0 8rpx; position: relative; }
+.logo { font-size: 44rpx; font-weight: 900; font-style: italic; letter-spacing: 2rpx;
+  text-shadow: 0 0 24rpx rgba(255,61,46,.45); }
+.logo-grad {
+  background: linear-gradient(135deg, #ff2d2e 0%, #ff7a1f 55%, #ffae00 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent; }
+.tagline { color: #c49b8b; font-size: 24rpx; margin-top: 8rpx; font-style: italic; letter-spacing: 1rpx; }
+.live-chip { display: inline-block; margin-top: 14rpx; font-size: 22rpx; font-weight: 800; color: #ffd34d;
+  border: 1rpx solid rgba(255,211,77,.5); border-radius: 30rpx; padding: 4rpx 20rpx; letter-spacing: 2rpx; }
+
+.card { background: #221012; border: 1rpx solid #4a2520; border-radius: 24rpx; padding: 28rpx; margin: 22rpx 0;
+  box-shadow: 0 6rpx 30rpx rgba(0,0,0,.35); }
+.card-h { font-size: 30rpx; font-weight: 900; font-style: italic; letter-spacing: 1rpx;
+  border-left: 6rpx solid #ff3d2e; padding-left: 16rpx; margin-bottom: 22rpx; }
+.btn { width: 100%; padding: 28rpx 0; border: none; border-radius: 22rpx; box-sizing: border-box;
+  background: linear-gradient(135deg, #ff2d2e 0%, #ff7a1f 55%, #ffae00 100%);
+  color: #fff; font-size: 34rpx; font-weight: 900; font-style: italic; letter-spacing: 6rpx;
+  box-shadow: 0 6rpx 28rpx rgba(255,61,46,.45); }
+.btn::after { border: none; }
+.btn-ghost { background: #2e1614; color: #fdeee4; border: 1rpx solid #4a2520;
+  font-weight: 600; letter-spacing: 2rpx; box-shadow: none; }
+.btn[disabled] { opacity: .55; }
+.hint { color: #c49b8b; font-size: 24rpx; line-height: 1.7; }
+.tag { display: inline-block; background: #2e1614; border: 1rpx solid #4a2520; border-radius: 30rpx;
+  padding: 2rpx 18rpx; font-size: 22rpx; color: #c49b8b; }
+.disclaimer { text-align: center; color: #8a625a; font-size: 22rpx; padding: 30rpx 20rpx 10rpx; line-height: 1.8; }
+.disclaimer .em { color: #ffae00; }
