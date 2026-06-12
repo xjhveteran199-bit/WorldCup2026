@@ -7,7 +7,7 @@
 
   var PROVIDERS = [
     { id: "deepseek", name: "DeepSeek 深度求索", base: "https://api.deepseek.com/chat/completions",
-      models: ["deepseek-chat", "deepseek-reasoner"], keyUrl: "https://platform.deepseek.com/api_keys",
+      models: ["deepseek-v4-flash", "deepseek-v4-pro"], keyUrl: "https://platform.deepseek.com/api_keys",
       keyPrefix: "sk-", search: false },
     { id: "kimi", name: "Kimi（月之暗面）", base: "https://api.moonshot.cn/v1/chat/completions",
       models: ["kimi-k2-0905-preview", "moonshot-v1-8k"], keyUrl: "https://platform.moonshot.cn/console/api-keys",
