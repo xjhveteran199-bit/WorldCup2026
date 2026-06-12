@@ -7,10 +7,11 @@
 <meta name="description" content="Elo+双泊松统计模型 × AI大模型战术分析，科学预测2026世界杯每一场比赛。模拟一万届世界杯，谁是冠军？">
 <style>
 :root {
-  --bg: #0a0e1a; --bg2: #111831; --card: #151d36; --card2: #1b2547;
-  --line: #263259; --txt: #e8ecf8; --sub: #8b97b8;
-  --green: #00e5a0; --purple: #8b6cff; --gold: #ffc862; --red: #ff6b81;
-  --grad: linear-gradient(135deg, #00e5a0, #8b6cff);
+  --bg: #120608; --bg2: #1e0c0e; --card: #221012; --card2: #2e1614;
+  --line: #4a2520; --txt: #fdeee4; --sub: #c49b8b;
+  --green: #ffae00; --purple: #3da5ff; --gold: #ffd34d; --red: #ff4d4d;
+  --fire: #ff3d2e;
+  --grad: linear-gradient(135deg, #ff2d2e 0%, #ff7a1f 55%, #ffae00 100%);
 }
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html { font-size: 15px; }
@@ -18,17 +19,23 @@ body {
   background: var(--bg); color: var(--txt); min-height: 100vh;
   font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
   padding-bottom: 76px;
-  background-image: radial-gradient(ellipse 80% 40% at 50% -10%, rgba(139,108,255,.18), transparent),
-                    radial-gradient(ellipse 60% 30% at 80% 110%, rgba(0,229,160,.08), transparent);
+  background-image: radial-gradient(ellipse 80% 40% at 50% -10%, rgba(255,61,46,.22), transparent),
+                    radial-gradient(ellipse 60% 30% at 85% 110%, rgba(255,174,0,.10), transparent),
+                    repeating-linear-gradient(115deg, transparent 0 26px, rgba(255,77,46,.025) 26px 52px);
 }
 .wrap { max-width: 560px; margin: 0 auto; padding: 0 14px; }
 
 /* ---------- 顶栏 ---------- */
 header { padding: 18px 0 6px; text-align: center; position: relative; }
-.logo { font-size: 1.5rem; font-weight: 800; letter-spacing: 1px; }
-.logo .oct { font-size: 1.7rem; }
+.logo { font-size: 1.65rem; font-weight: 900; letter-spacing: 2px; font-style: italic;
+  text-shadow: 0 0 24px rgba(255,61,46,.45); }
+.logo .oct { font-size: 1.8rem; }
 .logo .grad { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.tagline { color: var(--sub); font-size: .78rem; margin-top: 4px; }
+.tagline { color: var(--sub); font-size: .78rem; margin-top: 4px; font-style: italic; letter-spacing: 1px; }
+.live-chip { display: inline-block; margin-top: 8px; font-size: .68rem; font-weight: 800; color: #ffd34d;
+  border: 1px solid rgba(255,211,77,.5); border-radius: 20px; padding: 3px 12px; letter-spacing: 2px;
+  animation: pulse 1.6s infinite; }
+@keyframes pulse { 50% { box-shadow: 0 0 14px rgba(255,61,46,.6); border-color: var(--fire); } }
 .gear { position: absolute; right: 0; top: 20px; background: var(--card); border: 1px solid var(--line);
   border-radius: 10px; padding: 7px 11px; color: var(--txt); font-size: .85rem; cursor: pointer; }
 .gear.on { border-color: var(--green); color: var(--green); }
@@ -45,10 +52,14 @@ nav button.on { color: var(--green); }
 .page { display: none; animation: fade .25s; }
 .page.on { display: block; }
 @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; } }
-.card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; margin: 12px 0; }
-.card h3 { font-size: .95rem; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
-.btn { display: block; width: 100%; padding: 14px; border: none; border-radius: 14px; background: var(--grad);
-  color: #07101f; font-size: 1.05rem; font-weight: 800; cursor: pointer; letter-spacing: 2px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; margin: 12px 0;
+  box-shadow: 0 4px 24px rgba(0,0,0,.35); }
+.card h3 { font-size: 1rem; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;
+  font-style: italic; font-weight: 900; letter-spacing: 1px;
+  border-left: 4px solid var(--fire); padding-left: 9px; }
+.btn { display: block; width: 100%; padding: 15px; border: none; border-radius: 14px; background: var(--grad);
+  color: #fff; font-size: 1.1rem; font-weight: 900; cursor: pointer; letter-spacing: 4px; font-style: italic;
+  text-shadow: 0 1px 3px rgba(0,0,0,.35); box-shadow: 0 4px 22px rgba(255,61,46,.45); }
 .btn:active { transform: scale(.98); }
 .btn.ghost { background: var(--card2); color: var(--txt); border: 1px solid var(--line); font-weight: 600; letter-spacing: 0; }
 .btn[disabled] { opacity: .5; }
@@ -59,7 +70,9 @@ nav button.on { color: var(--green); }
 /* ---------- 对阵选择 ---------- */
 .vs-row { display: flex; align-items: center; gap: 10px; }
 .vs-row .side { flex: 1; }
-.vs-row .vs { font-weight: 900; color: var(--purple); font-size: 1.1rem; }
+.vs-row .vs { font-weight: 900; font-size: 1.5rem; font-style: italic;
+  background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent;
+  text-shadow: 0 0 18px rgba(255,61,46,.35); }
 select, input[type=text], input[type=password], textarea {
   width: 100%; background: var(--bg2); color: var(--txt); border: 1px solid var(--line);
   border-radius: 12px; padding: 12px 10px; font-size: .95rem; outline: none; }
@@ -70,7 +83,7 @@ select:focus, input:focus, textarea:focus { border-color: var(--green); }
 .mode-row { display: flex; gap: 8px; margin: 12px 0; }
 .mode-row button { flex: 1; padding: 9px; border-radius: 10px; border: 1px solid var(--line);
   background: var(--bg2); color: var(--sub); font-size: .85rem; cursor: pointer; }
-.mode-row button.on { border-color: var(--green); color: var(--green); background: rgba(0,229,160,.08); }
+.mode-row button.on { border-color: var(--fire); color: #ff8a5e; background: rgba(255,61,46,.10); font-weight: 800; }
 details.adv { margin: 10px 0; }
 details.adv summary { color: var(--sub); font-size: .8rem; cursor: pointer; }
 .slider-row { display: flex; align-items: center; gap: 8px; margin: 10px 0 2px; font-size: .8rem; }
@@ -80,7 +93,9 @@ details.adv summary { color: var(--sub); font-size: .8rem; cursor: pointer; }
 /* ---------- 结果区 ---------- */
 .prob-bar { display: flex; height: 38px; border-radius: 10px; overflow: hidden; font-size: .78rem; font-weight: 700; margin: 8px 0 4px; }
 .prob-bar div { display: flex; align-items: center; justify-content: center; color: #07101f; min-width: 36px; transition: width .6s; }
-.prob-bar .w { background: var(--green); } .prob-bar .d { background: #67719a; color: #0c1224; } .prob-bar .l { background: var(--purple); }
+.prob-bar .w { background: linear-gradient(135deg,#ff2d2e,#ff7a1f); color: #fff; }
+.prob-bar .d { background: #7a5c50; color: #fff; }
+.prob-bar .l { background: linear-gradient(135deg,#1f6fd4,#3da5ff); color: #fff; }
 .prob-legend { display: flex; justify-content: space-between; font-size: .75rem; color: var(--sub); }
 .score-big { text-align: center; margin: 14px 0 6px; }
 .score-big .s { font-size: 2.6rem; font-weight: 900; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
@@ -103,9 +118,9 @@ canvas.radar { display: block; margin: 0 auto; }
 .ai-out { font-size: .88rem; line-height: 1.8; }
 .ai-out h2 { font-size: .95rem; color: var(--green); margin: 14px 0 4px; border-left: 3px solid var(--green); padding-left: 8px; }
 .ai-out strong { color: var(--gold); }
-.ai-quote { background: rgba(139,108,255,.12); border: 1px solid var(--purple); border-radius: 12px;
-  padding: 12px; margin-top: 12px; font-size: .92rem; text-align: center; }
-.ai-quote b { color: var(--purple); }
+.ai-quote { background: rgba(255,211,77,.10); border: 1px solid var(--gold); border-radius: 12px;
+  padding: 12px; margin-top: 12px; font-size: .95rem; text-align: center; font-style: italic; }
+.ai-quote b { color: var(--gold); }
 .cursor { display: inline-block; width: 8px; height: 16px; background: var(--green); animation: blink .8s infinite; vertical-align: -2px; }
 @keyframes blink { 50% { opacity: 0; } }
 .fuse-note { font-size: .75rem; color: var(--sub); margin-top: 6px; text-align: center; }
@@ -153,7 +168,7 @@ canvas.radar { display: block; margin: 0 auto; }
   text-align: center; font-family: Georgia, serif; font-style: italic; margin: 8px 0; color: var(--gold); font-size: .9rem; }
 
 footer { text-align: center; color: var(--sub); font-size: .68rem; padding: 24px 14px 10px; line-height: 1.8; }
-footer b { color: var(--purple); }
+footer b { color: var(--green); }
 </style>
 </head>
 <body>
@@ -161,7 +176,8 @@ footer b { color: var(--purple); }
 <div class="wrap">
   <header>
     <div class="logo"><span class="oct">🐙</span> <span class="grad">硅基章鱼</span></div>
-    <div class="tagline">2026美加墨世界杯 AI 预测 · 统计模型 × 大模型双引擎</div>
+    <div class="tagline">碳基看球，硅基算球 · 统计模型 × 大模型双引擎</div>
+    <div class="live-chip">⚽ 2026 世界杯 · 开战中 LIVE</div>
     <button class="gear" id="gearBtn" onclick="openSettings()">⚙️ AI</button>
   </header>
 
@@ -192,7 +208,7 @@ footer b { color: var(--purple); }
         <div class="slider-row"><span id="sligB">B队</span><input type="range" id="formB" min="30" max="99" oninput="document.getElementById('valB').textContent=this.value"><span class="val" id="valB">-</span></div>
         <div class="hint">状态值影响有效 Elo（±50 封顶），可根据最新伤病/首发情报手动微调。</div>
       </details>
-      <button class="btn" onclick="predict()">🐙 开始预测</button>
+      <button class="btn" onclick="predict()">🔥 开赛！立即预测</button>
     </div>
 
     <div id="resultArea" style="display:none">
@@ -462,9 +478,9 @@ function renderResult(a, b, p) {
     html += "<tr><th>" + x + "</th>";
     for (y = 0; y <= 5; y++) {
       var v = p.matrix[x][y], ratio = v / maxP;
-      var col = "rgba(0,229,160," + (ratio * 0.85).toFixed(2) + ")";
-      if (x < y) col = "rgba(139,108,255," + (ratio * 0.85).toFixed(2) + ")";
-      if (x === y) col = "rgba(255,200,98," + (ratio * 0.7).toFixed(2) + ")";
+      var col = "rgba(255,61,46," + (ratio * 0.9).toFixed(2) + ")";
+      if (x < y) col = "rgba(61,165,255," + (ratio * 0.85).toFixed(2) + ")";
+      if (x === y) col = "rgba(255,211,77," + (ratio * 0.7).toFixed(2) + ")";
       html += '<td style="background:' + col + '">' + (v * 100).toFixed(1) + "</td>";
     }
     html += "</tr>";
@@ -515,7 +531,7 @@ function drawRadar(a, b) {
     ctx.textAlign = "center"; ctx.fillText(keys[i], ql[0], ql[1] + 4);
   }
   // 两队多边形
-  [[da, "0,229,160"], [db, "139,108,255"]].forEach(function (pair) {
+  [[da, "255,77,46"], [db, "61,165,255"]].forEach(function (pair) {
     var d = pair[0], col = pair[1];
     ctx.beginPath();
     for (var i = 0; i <= n; i++) {
@@ -527,7 +543,7 @@ function drawRadar(a, b) {
     ctx.strokeStyle = "rgb(" + col + ")"; ctx.lineWidth = 2; ctx.stroke();
   });
   document.getElementById("radarLegend").innerHTML =
-    '<span><i style="background:#00e5a0"></i>' + a.zh + "</span><span><i style='background:#8b6cff'></i>" + b.zh + "</span>";
+    '<span><i style="background:#ff4d2e"></i>' + a.zh + "</span><span><i style='background:#3da5ff'></i>" + b.zh + "</span>";
 }
 
 /* ============ AI 分析 ============ */
@@ -674,27 +690,35 @@ function cardBase(cv, title) {
   var ctx = cv.getContext("2d");
   var W = cv.width, H = cv.height;
   var g = ctx.createLinearGradient(0, 0, W, H);
-  g.addColorStop(0, "#0c1226"); g.addColorStop(.55, "#131b3d"); g.addColorStop(1, "#0a2a24");
+  g.addColorStop(0, "#1c0608"); g.addColorStop(.55, "#2a0d0a"); g.addColorStop(1, "#341103");
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-  // 装饰光斑
-  var rg = ctx.createRadialGradient(W * .8, H * .12, 0, W * .8, H * .12, 420);
-  rg.addColorStop(0, "rgba(139,108,255,.30)"); rg.addColorStop(1, "transparent");
+  // 火焰光斑
+  var rg = ctx.createRadialGradient(W * .8, H * .1, 0, W * .8, H * .1, 460);
+  rg.addColorStop(0, "rgba(255,61,46,.40)"); rg.addColorStop(1, "transparent");
   ctx.fillStyle = rg; ctx.fillRect(0, 0, W, H);
+  var rg2 = ctx.createRadialGradient(W * .12, H * .92, 0, W * .12, H * .92, 380);
+  rg2.addColorStop(0, "rgba(255,174,0,.22)"); rg2.addColorStop(1, "transparent");
+  ctx.fillStyle = rg2; ctx.fillRect(0, 0, W, H);
+  // 斜向速度线
+  ctx.strokeStyle = "rgba(255,77,46,.07)"; ctx.lineWidth = 22;
+  for (var i = -4; i < 14; i++) {
+    ctx.beginPath(); ctx.moveTo(i * 110, 0); ctx.lineTo(i * 110 + 300, H); ctx.stroke();
+  }
   ctx.textAlign = "center";
   ctx.fillStyle = "#fff";
-  ctx.font = "900 56px sans-serif";
+  ctx.font = "italic 900 58px sans-serif";
   ctx.fillText("🐙 硅基章鱼", W / 2, 110);
-  ctx.fillStyle = "#8b97b8"; ctx.font = "32px sans-serif";
+  ctx.fillStyle = "#d8a48f"; ctx.font = "italic 32px sans-serif";
   ctx.fillText(title, W / 2, 168);
   return ctx;
 }
 function cardFoot(ctx, W, H) {
   ctx.textAlign = "center";
-  ctx.fillStyle = "#8b97b8"; ctx.font = "28px sans-serif";
+  ctx.fillStyle = "#c49b8b"; ctx.font = "28px sans-serif";
   ctx.fillText("Elo × 双泊松 × Dixon-Coles × AI 大模型", W / 2, H - 130);
-  ctx.fillStyle = "#00e5a0"; ctx.font = "700 34px sans-serif";
+  ctx.fillStyle = "#ffae00"; ctx.font = "italic 700 34px sans-serif";
   ctx.fillText(WATERMARK, W / 2, H - 78);
-  ctx.fillStyle = "#5b6685"; ctx.font = "22px sans-serif";
+  ctx.fillStyle = "#8a625a"; ctx.font = "22px sans-serif";
   ctx.fillText("仅供娱乐 · 理性看球", W / 2, H - 38);
 }
 function makeCard() {
@@ -710,26 +734,28 @@ function makeCard() {
   ctx.fillText(a.flag, W * .27, 400); ctx.fillText(b.flag, W * .73, 400);
   ctx.fillStyle = "#fff"; ctx.font = "900 52px sans-serif";
   ctx.fillText(a.zh, W * .27, 488); ctx.fillText(b.zh, W * .73, 488);
-  ctx.fillStyle = "#8b6cff"; ctx.font = "900 60px sans-serif"; ctx.fillText("VS", W / 2, 420);
-  ctx.fillStyle = "#8b97b8"; ctx.font = "26px sans-serif";
+  ctx.fillStyle = "#ff7a1f"; ctx.font = "italic 900 64px sans-serif"; ctx.fillText("VS", W / 2, 420);
+  ctx.fillStyle = "#c49b8b"; ctx.font = "26px sans-serif";
   ctx.fillText("Elo " + a.elo + " · " + a.formation, W * .27, 530);
   ctx.fillText("Elo " + b.elo + " · " + b.formation, W * .73, 530);
   // 比分
   var top = p.topScores[0];
   var grad = ctx.createLinearGradient(W * .3, 0, W * .7, 0);
-  grad.addColorStop(0, "#00e5a0"); grad.addColorStop(1, "#8b6cff");
-  ctx.fillStyle = grad; ctx.font = "900 170px sans-serif";
+  grad.addColorStop(0, "#ff2d2e"); grad.addColorStop(1, "#ffae00");
+  ctx.fillStyle = grad; ctx.font = "italic 900 175px sans-serif";
   var scoreStr = adj && adj.predictedScore ? adj.predictedScore.replace("-", " : ") : top.a + " : " + top.b;
   ctx.fillText(scoreStr, W / 2, 740);
-  ctx.fillStyle = "#8b97b8"; ctx.font = "30px sans-serif";
+  ctx.fillStyle = "#c49b8b"; ctx.font = "30px sans-serif";
   ctx.fillText(adj ? "AI 融合预测比分" : "模型最可能比分（" + pct(top.p) + "）", W / 2, 800);
   // 概率条
   var pw = fused ? fused.pWin : p.pWin, pd = fused ? fused.pDraw : p.pDraw, pl = fused ? fused.pLoss : p.pLoss;
   var bx = 90, bw = W - 180, by = 880, bh = 64;
-  ctx.fillStyle = "#00e5a0"; ctx.fillRect(bx, by, bw * pw, bh);
-  ctx.fillStyle = "#67719a"; ctx.fillRect(bx + bw * pw, by, bw * pd, bh);
-  ctx.fillStyle = "#8b6cff"; ctx.fillRect(bx + bw * (pw + pd), by, bw * pl, bh);
-  ctx.fillStyle = "#07101f"; ctx.font = "700 30px sans-serif";
+  var wg = ctx.createLinearGradient(bx, 0, bx + bw * pw, 0);
+  wg.addColorStop(0, "#ff2d2e"); wg.addColorStop(1, "#ff7a1f");
+  ctx.fillStyle = wg; ctx.fillRect(bx, by, bw * pw, bh);
+  ctx.fillStyle = "#7a5c50"; ctx.fillRect(bx + bw * pw, by, bw * pd, bh);
+  ctx.fillStyle = "#3da5ff"; ctx.fillRect(bx + bw * (pw + pd), by, bw * pl, bh);
+  ctx.fillStyle = "#fff"; ctx.font = "700 30px sans-serif";
   if (pw > .12) ctx.fillText(pct(pw), bx + bw * pw / 2, by + 42);
   if (pd > .12) ctx.fillText(pct(pd), bx + bw * (pw + pd / 2), by + 42);
   if (pl > .12) ctx.fillText(pct(pl), bx + bw * (pw + pd + pl / 2), by + 42);
@@ -739,13 +765,13 @@ function makeCard() {
   ctx.textAlign = "center"; ctx.fillText("平", bx + bw * (pw + pd / 2), by + 110);
   // 金句
   if (adj && adj.quote) {
-    ctx.fillStyle = "rgba(139,108,255,.15)";
+    ctx.fillStyle = "rgba(255,211,77,.12)";
     roundRect(ctx, 80, 1060, W - 160, 120, 24); ctx.fill();
-    ctx.strokeStyle = "#8b6cff"; ctx.lineWidth = 2; roundRect(ctx, 80, 1060, W - 160, 120, 24); ctx.stroke();
-    ctx.fillStyle = "#e8ecf8"; ctx.font = "700 36px sans-serif";
+    ctx.strokeStyle = "#ffd34d"; ctx.lineWidth = 2; roundRect(ctx, 80, 1060, W - 160, 120, 24); ctx.stroke();
+    ctx.fillStyle = "#fdeee4"; ctx.font = "italic 700 36px sans-serif";
     ctx.fillText("🐙 “" + adj.quote.slice(0, 22) + "”", W / 2, 1135);
   } else {
-    ctx.fillStyle = "#5b6685"; ctx.font = "28px sans-serif";
+    ctx.fillStyle = "#8a625a"; ctx.font = "28px sans-serif";
     ctx.fillText("接入 AI 大模型可解锁战术分析与章鱼金句", W / 2, 1120);
   }
   cardFoot(ctx, W, 1440);
@@ -759,7 +785,7 @@ function makeSimCard() {
   cv.width = 1080; cv.height = 1440;
   var ctx = cardBase(cv, "AI 模拟了 10000 届世界杯");
   var W = 1080;
-  ctx.fillStyle = "#ffc862"; ctx.font = "900 64px sans-serif";
+  ctx.fillStyle = "#ffd34d"; ctx.font = "italic 900 64px sans-serif";
   ctx.fillText("👑 夺冠概率排行榜", W / 2, 280);
   var rows = Object.keys(simData.agg.champion).map(function (c) {
     return { c: c, p: simData.agg.champion[c] / simData.N };
@@ -768,16 +794,16 @@ function makeSimCard() {
   rows.forEach(function (r, i) {
     var t = D.teams[r.c], y = y0 + i * rh;
     ctx.textAlign = "left";
-    ctx.fillStyle = i < 3 ? "#ffc862" : "#8b97b8"; ctx.font = "700 34px sans-serif";
+    ctx.fillStyle = i < 3 ? "#ffd34d" : "#c49b8b"; ctx.font = "700 34px sans-serif";
     ctx.fillText(String(i + 1).padStart(2, "0"), 90, y + 40);
     ctx.font = "44px sans-serif"; ctx.fillText(t.flag, 160, y + 44);
-    ctx.fillStyle = "#e8ecf8"; ctx.font = "700 36px sans-serif"; ctx.fillText(t.zh, 232, y + 42);
+    ctx.fillStyle = "#fdeee4"; ctx.font = "700 36px sans-serif"; ctx.fillText(t.zh, 232, y + 42);
     var bx = 460, bw = 420;
     ctx.fillStyle = "rgba(255,255,255,.08)"; roundRect(ctx, bx, y + 8, bw, 40, 12); ctx.fill();
     var g = ctx.createLinearGradient(bx, 0, bx + bw, 0);
-    g.addColorStop(0, "#00e5a0"); g.addColorStop(1, "#8b6cff");
+    g.addColorStop(0, "#ff2d2e"); g.addColorStop(1, "#ffae00");
     ctx.fillStyle = g; roundRect(ctx, bx, y + 8, Math.max(24, bw * r.p / maxP), 40, 12); ctx.fill();
-    ctx.fillStyle = "#00e5a0"; ctx.font = "700 34px sans-serif"; ctx.textAlign = "right";
+    ctx.fillStyle = "#ffae00"; ctx.font = "700 34px sans-serif"; ctx.textAlign = "right";
     ctx.fillText((r.p * 100).toFixed(1) + "%", W - 80, y + 42);
     ctx.textAlign = "center";
   });
