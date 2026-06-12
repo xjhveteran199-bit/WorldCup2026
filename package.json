@@ -1,0 +1,24 @@
+{
+  "name": "worldcup2026",
+  "version": "1.0.0",
+  "description": "**碳基看球，硅基算球。** 统计模型 × AI 大模型双引擎的世界杯比赛预测工具。",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xjhveteran199-bit/WorldCup2026.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/xjhveteran199-bit/WorldCup2026/issues"
+  },
+  "homepage": "https://github.com/xjhveteran199-bit/WorldCup2026#readme",
+  "dependencies": {
+    "miniprogram-ci": "^2.1.31"
+  }
+}
