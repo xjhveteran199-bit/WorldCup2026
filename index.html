@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>硅基章鱼 · 2026美加墨世界杯AI预测</title>
+<meta name="description" content="Elo+双泊松统计模型 × AI大模型战术分析，科学预测2026世界杯每一场比赛。模拟一万届世界杯，谁是冠军？">
+<style>
+:root {
+  --bg: #0a0e1a; --bg2: #111831; --card: #151d36; --card2: #1b2547;
+  --line: #263259; --txt: #e8ecf8; --sub: #8b97b8;
+  --green: #00e5a0; --purple: #8b6cff; --gold: #ffc862; --red: #ff6b81;
+  --grad: linear-gradient(135deg, #00e5a0, #8b6cff);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html { font-size: 15px; }
+body {
+  background: var(--bg); color: var(--txt); min-height: 100vh;
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  padding-bottom: 76px;
+  background-image: radial-gradient(ellipse 80% 40% at 50% -10%, rgba(139,108,255,.18), transparent),
+                    radial-gradient(ellipse 60% 30% at 80% 110%, rgba(0,229,160,.08), transparent);
+}
+.wrap { max-width: 560px; margin: 0 auto; padding: 0 14px; }
+
+/* ---------- 顶栏 ---------- */
+header { padding: 18px 0 6px; text-align: center; position: relative; }
+.logo { font-size: 1.5rem; font-weight: 800; letter-spacing: 1px; }
+.logo .oct { font-size: 1.7rem; }
+.logo .grad { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.tagline { color: var(--sub); font-size: .78rem; margin-top: 4px; }
+.gear { position: absolute; right: 0; top: 20px; background: var(--card); border: 1px solid var(--line);
+  border-radius: 10px; padding: 7px 11px; color: var(--txt); font-size: .85rem; cursor: pointer; }
+.gear.on { border-color: var(--green); color: var(--green); }
+
+/* ---------- 底部导航 ---------- */
+nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(13,18,36,.96);
+  backdrop-filter: blur(12px); border-top: 1px solid var(--line); display: flex; z-index: 50; }
+nav button { flex: 1; background: none; border: none; color: var(--sub); padding: 9px 0 max(9px, env(safe-area-inset-bottom));
+  font-size: .72rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+nav button .ic { font-size: 1.25rem; }
+nav button.on { color: var(--green); }
+
+/* ---------- 通用 ---------- */
+.page { display: none; animation: fade .25s; }
+.page.on { display: block; }
+@keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; } }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; margin: 12px 0; }
+.card h3 { font-size: .95rem; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+.btn { display: block; width: 100%; padding: 14px; border: none; border-radius: 14px; background: var(--grad);
+  color: #07101f; font-size: 1.05rem; font-weight: 800; cursor: pointer; letter-spacing: 2px; }
+.btn:active { transform: scale(.98); }
+.btn.ghost { background: var(--card2); color: var(--txt); border: 1px solid var(--line); font-weight: 600; letter-spacing: 0; }
+.btn[disabled] { opacity: .5; }
+.hint { color: var(--sub); font-size: .75rem; line-height: 1.6; }
+.tag { display: inline-block; background: var(--card2); border: 1px solid var(--line); border-radius: 20px;
+  padding: 2px 10px; font-size: .72rem; color: var(--sub); margin: 2px 3px 2px 0; }
+
+/* ---------- 对阵选择 ---------- */
+.vs-row { display: flex; align-items: center; gap: 10px; }
+.vs-row .side { flex: 1; }
+.vs-row .vs { font-weight: 900; color: var(--purple); font-size: 1.1rem; }
+select, input[type=text], input[type=password], textarea {
+  width: 100%; background: var(--bg2); color: var(--txt); border: 1px solid var(--line);
+  border-radius: 12px; padding: 12px 10px; font-size: .95rem; outline: none; }
+select:focus, input:focus, textarea:focus { border-color: var(--green); }
+.team-pick { text-align: center; }
+.team-pick .flag { font-size: 2.6rem; line-height: 1.2; }
+.team-pick .meta { font-size: .7rem; color: var(--sub); margin-top: 3px; min-height: 1em; }
+.mode-row { display: flex; gap: 8px; margin: 12px 0; }
+.mode-row button { flex: 1; padding: 9px; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--bg2); color: var(--sub); font-size: .85rem; cursor: pointer; }
+.mode-row button.on { border-color: var(--green); color: var(--green); background: rgba(0,229,160,.08); }
+details.adv { margin: 10px 0; }
+details.adv summary { color: var(--sub); font-size: .8rem; cursor: pointer; }
+.slider-row { display: flex; align-items: center; gap: 8px; margin: 10px 0 2px; font-size: .8rem; }
+.slider-row input[type=range] { flex: 1; accent-color: var(--green); }
+.slider-row .val { width: 30px; text-align: right; color: var(--green); font-weight: 700; }
+
+/* ---------- 结果区 ---------- */
+.prob-bar { display: flex; height: 38px; border-radius: 10px; overflow: hidden; font-size: .78rem; font-weight: 700; margin: 8px 0 4px; }
+.prob-bar div { display: flex; align-items: center; justify-content: center; color: #07101f; min-width: 36px; transition: width .6s; }
+.prob-bar .w { background: var(--green); } .prob-bar .d { background: #67719a; color: #0c1224; } .prob-bar .l { background: var(--purple); }
+.prob-legend { display: flex; justify-content: space-between; font-size: .75rem; color: var(--sub); }
+.score-big { text-align: center; margin: 14px 0 6px; }
+.score-big .s { font-size: 2.6rem; font-weight: 900; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.score-big .lab { color: var(--sub); font-size: .75rem; }
+.top-scores { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+.top-scores span { background: var(--card2); border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px; font-size: .8rem; }
+.top-scores b { color: var(--gold); }
+table.heat { border-collapse: collapse; margin: 8px auto; }
+table.heat td, table.heat th { width: 38px; height: 30px; text-align: center; font-size: .68rem; border: 1px solid rgba(38,50,89,.4); }
+table.heat th { color: var(--sub); font-weight: 600; background: var(--bg2); }
+.factors div { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px dashed var(--line); font-size: .83rem; }
+.factors div:last-child { border: none; }
+.factors .v { font-weight: 700; }
+.pos { color: var(--green); } .neg { color: var(--red); } .neu { color: var(--sub); }
+canvas.radar { display: block; margin: 0 auto; }
+.radar-legend { display: flex; justify-content: center; gap: 18px; font-size: .78rem; margin-top: 6px; }
+.radar-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; }
+
+/* ---------- AI 区 ---------- */
+.ai-out { font-size: .88rem; line-height: 1.8; }
+.ai-out h2 { font-size: .95rem; color: var(--green); margin: 14px 0 4px; border-left: 3px solid var(--green); padding-left: 8px; }
+.ai-out strong { color: var(--gold); }
+.ai-quote { background: rgba(139,108,255,.12); border: 1px solid var(--purple); border-radius: 12px;
+  padding: 12px; margin-top: 12px; font-size: .92rem; text-align: center; }
+.ai-quote b { color: var(--purple); }
+.cursor { display: inline-block; width: 8px; height: 16px; background: var(--green); animation: blink .8s infinite; vertical-align: -2px; }
+@keyframes blink { 50% { opacity: 0; } }
+.fuse-note { font-size: .75rem; color: var(--sub); margin-top: 6px; text-align: center; }
+
+/* ---------- 赛程 ---------- */
+.day-h { color: var(--gold); font-size: .82rem; font-weight: 700; margin: 16px 0 6px; }
+.fx { display: flex; align-items: center; background: var(--card); border: 1px solid var(--line);
+  border-radius: 12px; padding: 10px 12px; margin: 6px 0; cursor: pointer; gap: 6px; }
+.fx:active { background: var(--card2); }
+.fx .t { color: var(--sub); font-size: .7rem; width: 44px; flex-shrink: 0; }
+.fx .nm { flex: 1; font-size: .86rem; text-align: right; }
+.fx .nm2 { flex: 1; font-size: .86rem; }
+.fx .mid { font-weight: 800; color: var(--purple); font-size: .8rem; padding: 0 4px; }
+.fx .res { color: var(--gold); font-weight: 800; }
+.fx.today { border-color: var(--green); }
+.fx .g { font-size: .62rem; color: var(--sub); background: var(--bg2); border-radius: 6px; padding: 1px 5px; margin-left: 4px; }
+
+/* ---------- 模拟 ---------- */
+.rank-row { display: flex; align-items: center; gap: 8px; margin: 7px 0; font-size: .85rem; }
+.rank-row .n { width: 22px; color: var(--sub); font-size: .75rem; }
+.rank-row .f { width: 28px; text-align: center; }
+.rank-row .nm { width: 76px; }
+.rank-row .bar { flex: 1; height: 16px; background: var(--bg2); border-radius: 8px; overflow: hidden; }
+.rank-row .bar i { display: block; height: 100%; background: var(--grad); border-radius: 8px; transition: width .8s; }
+.rank-row .pc { width: 48px; text-align: right; font-weight: 700; color: var(--green); font-size: .8rem; }
+.progress { height: 8px; background: var(--bg2); border-radius: 4px; overflow: hidden; margin: 10px 0; }
+.progress i { display: block; height: 100%; background: var(--grad); width: 0; transition: width .2s; }
+
+/* ---------- 设置弹窗 ---------- */
+.mask { position: fixed; inset: 0; background: rgba(5,8,18,.78); z-index: 90; display: none; }
+.mask.on { display: flex; align-items: flex-end; justify-content: center; }
+.sheet { background: var(--bg2); border-radius: 20px 20px 0 0; width: 100%; max-width: 560px;
+  max-height: 86vh; overflow-y: auto; padding: 20px 18px calc(20px + env(safe-area-inset-bottom)); }
+.sheet h3 { margin-bottom: 4px; }
+.sheet .row { margin: 12px 0; }
+.sheet label { font-size: .8rem; color: var(--sub); display: block; margin-bottom: 6px; }
+.key-status { font-size: .8rem; margin-top: 8px; min-height: 1.2em; }
+.modal-x { float: right; background: none; border: none; color: var(--sub); font-size: 1.3rem; cursor: pointer; }
+
+/* ---------- 模型说明 ---------- */
+.doc { font-size: .87rem; line-height: 1.85; color: #c6cee6; }
+.doc h4 { color: var(--green); margin: 16px 0 6px; }
+.doc code { background: var(--bg2); border-radius: 6px; padding: 2px 6px; font-size: .8rem; color: var(--gold); }
+.formula { background: var(--bg2); border: 1px solid var(--line); border-radius: 10px; padding: 10px;
+  text-align: center; font-family: Georgia, serif; font-style: italic; margin: 8px 0; color: var(--gold); font-size: .9rem; }
+
+footer { text-align: center; color: var(--sub); font-size: .68rem; padding: 24px 14px 10px; line-height: 1.8; }
+footer b { color: var(--purple); }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="logo"><span class="oct">🐙</span> <span class="grad">硅基章鱼</span></div>
+    <div class="tagline">2026美加墨世界杯 AI 预测 · 统计模型 × 大模型双引擎</div>
+    <button class="gear" id="gearBtn" onclick="openSettings()">⚙️ AI</button>
+  </header>
+
+  <!-- ============ 页1：预测 ============ -->
+  <div class="page on" id="pg-predict">
+    <div class="card">
+      <h3>⚔️ 选择对阵</h3>
+      <div class="vs-row">
+        <div class="side team-pick">
+          <div class="flag" id="flagA">🏳️</div>
+          <select id="selA" onchange="onPick()"></select>
+          <div class="meta" id="metaA"></div>
+        </div>
+        <div class="vs">VS</div>
+        <div class="side team-pick">
+          <div class="flag" id="flagB">🏳️</div>
+          <select id="selB" onchange="onPick()"></select>
+          <div class="meta" id="metaB"></div>
+        </div>
+      </div>
+      <div class="mode-row">
+        <button id="mGroup" class="on" onclick="setMode(false)">小组赛</button>
+        <button id="mKO" onclick="setMode(true)">淘汰赛（含点球）</button>
+      </div>
+      <details class="adv">
+        <summary>🎚️ 高级：临场状态调整（默认用内置评估值）</summary>
+        <div class="slider-row"><span id="sligA">A队</span><input type="range" id="formA" min="30" max="99" oninput="document.getElementById('valA').textContent=this.value"><span class="val" id="valA">-</span></div>
+        <div class="slider-row"><span id="sligB">B队</span><input type="range" id="formB" min="30" max="99" oninput="document.getElementById('valB').textContent=this.value"><span class="val" id="valB">-</span></div>
+        <div class="hint">状态值影响有效 Elo（±50 封顶），可根据最新伤病/首发情报手动微调。</div>
+      </details>
+      <button class="btn" onclick="predict()">🐙 开始预测</button>
+    </div>
+
+    <div id="resultArea" style="display:none">
+      <div class="card">
+        <h3>📊 统计模型预测 <span class="tag">Elo + 双泊松 + Dixon-Coles</span></h3>
+        <div class="prob-bar"><div class="w" id="barW"></div><div class="d" id="barD"></div><div class="l" id="barL"></div></div>
+        <div class="prob-legend"><span id="legW"></span><span id="legD"></span><span id="legL"></span></div>
+        <div class="score-big"><div class="s" id="bigScore">-</div><div class="lab">模型最可能比分</div></div>
+        <div class="top-scores" id="topScores"></div>
+        <div id="koLine" class="fuse-note"></div>
+      </div>
+
+      <div class="card">
+        <h3>🌡️ 比分概率热力图</h3>
+        <div style="overflow-x:auto"><table class="heat" id="heatTable"></table></div>
+        <div class="hint" style="text-align:center">行 = <span id="heatA"></span>进球 · 列 = <span id="heatB"></span>进球 · 颜色越亮概率越高</div>
+      </div>
+
+      <div class="card">
+        <h3>🕸️ 六维对比雷达</h3>
+        <canvas class="radar" id="radarCv" width="320" height="280"></canvas>
+        <div class="radar-legend" id="radarLegend"></div>
+      </div>
+
+      <div class="card">
+        <h3>🧮 修正因子明细 <span class="tag">透明可复现</span></h3>
+        <div class="factors" id="factorList"></div>
+      </div>
+
+      <div class="card" id="aiCard">
+        <h3>🤖 AI 战术深度分析 <span class="tag" id="aiTag">未连接</span></h3>
+        <div id="aiIdle">
+          <p class="hint" style="margin-bottom:10px">连接国产大模型（DeepSeek / Kimi / 智谱 / 通义 / MiniMax），解锁阵型相克、教练斗法、关键对位分析，并对统计概率做有界修正（±8%）。</p>
+          <textarea id="intelBox" rows="2" placeholder="（可选）粘贴最新情报：首发名单、伤病、天气……AI 会纳入分析"></textarea>
+          <div style="height:8px"></div>
+          <button class="btn ghost" id="aiBtn" onclick="runAI()">启动 AI 分析</button>
+        </div>
+        <div class="ai-out" id="aiOut" style="display:none"></div>
+        <div id="aiFuse"></div>
+      </div>
+
+      <button class="btn" style="margin:14px 0" onclick="makeCard()">📸 生成小红书分享卡片</button>
+      <div id="cardBox" style="display:none;text-align:center">
+        <img id="cardImg" style="width:75%;border-radius:14px;border:1px solid var(--line)" alt="分享卡片">
+        <p class="hint" style="margin-top:8px">长按图片保存 / 右键另存，发小红书 📕</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 页2：赛程 ============ -->
+  <div class="page" id="pg-fixtures">
+    <div class="card" style="margin-top:12px">
+      <h3>📅 完整赛程（北京时间）</h3>
+      <p class="hint">点击任意对阵直接生成预测 · 🟢 = 今日比赛 · 金色 = 已赛结果</p>
+    </div>
+    <div id="fxList"></div>
+  </div>
+
+  <!-- ============ 页3：冠军模拟 ============ -->
+  <div class="page" id="pg-sim">
+    <div class="card" style="margin-top:12px">
+      <h3>🏆 冠军模拟器</h3>
+      <p class="hint" style="margin-bottom:10px">蒙特卡洛法完整模拟整届世界杯（已赛场次锁定真实比分）：72 场小组赛 → 32 强 → 决赛，重复一万届，统计每队夺冠频率。</p>
+      <button class="btn" id="simBtn" onclick="runSim()">🎲 模拟 10000 届世界杯</button>
+      <div class="progress" id="simProg" style="display:none"><i id="simProgBar"></i></div>
+    </div>
+    <div class="card" id="simResult" style="display:none">
+      <h3>👑 夺冠概率排行 <span class="tag" id="simMeta"></span></h3>
+      <div id="rankList"></div>
+      <div style="height:10px"></div>
+      <button class="btn ghost" onclick="makeSimCard()">📸 生成夺冠榜分享卡片</button>
+      <div id="simCardBox" style="display:none;text-align:center;margin-top:10px">
+        <img id="simCardImg" style="width:75%;border-radius:14px;border:1px solid var(--line)" alt="夺冠榜卡片">
+        <p class="hint" style="margin-top:8px">长按保存，发小红书 📕</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 页4：模型说明 ============ -->
+  <div class="page" id="pg-doc">
+    <div class="card doc" style="margin-top:12px">
+      <h3>🔬 预测模型方法论</h3>
+      <h4>① Elo 评分体系</h4>
+      <p>采用 eloratings.net 的世界足球 Elo 评分（数据基线 <code id="docEloDate"></code>）。Elo 是国际象棋起源的实力量化体系，每场比赛后根据胜负、比分差和比赛权重动态更新，比 FIFA 排名更灵敏。两队相遇时的胜负期望：</p>
+      <div class="formula">W<sub>e</sub> = 1 / (1 + 10<sup>−Δ/400</sup>)</div>
+      <p>Δ 为有效 Elo 差 = 基础 Elo 差 + 东道主加成（+100，美加墨适用）+ 近期状态修正（±50 封顶）。</p>
+      <h4>② 双泊松进球模型</h4>
+      <p>足球比赛进球数近似服从泊松分布。我们把 Elo 差映射为两队期望进球：</p>
+      <div class="formula">λ = 1.30 × e<sup>0.0011·Δ</sup></div>
+      <p>由 λ<sub>A</sub>、λ<sub>B</sub> 生成 9×9 比分概率矩阵，再求和得到胜/平/负概率与最可能比分。淘汰赛进球期望 ×0.90（大赛保守系数），平局按点球模型（Elo 微调的近似五五开）分配晋级。</p>
+      <h4>③ Dixon-Coles 低比分修正</h4>
+      <p>经典泊松模型会低估 0-0/1-1 等低比分。Dixon & Coles (1997) 提出对四个低比分格子做相关性修正，本模型取 ρ = −0.13。</p>
+      <h4>④ 大模型战术层</h4>
+      <p>统计模型只看数字，看不见「阵型相克」「教练博弈」「更衣室状态」。接入大模型后，AI 基于阵容、战术风格、教练履历与你提供的最新情报输出定性分析，并对统计概率做<b>有界修正（每项 ≤ ±8 个百分点）</b>——既引入足球智慧，又不让 AI 胡说八道掩盖统计基线。两套结果并排展示，透明可复现。</p>
+      <h4>⑤ 冠军模拟器</h4>
+      <p>蒙特卡洛法：按上述模型给每场比赛的比分矩阵采样，完整走完小组赛 → 32 强 → 决赛流程，重复一万次统计夺冠频率。已赛场次锁定真实比分。注：小组第三晋级落位采用简化规则（未复刻 FIFA 官方落位表），对冠军概率影响极小。</p>
+      <h4>⚠️ 数据与局限</h4>
+      <p>Elo / FIFA 排名 / 已赛结果基线见页脚日期；「近期状态」为编辑评估值，可在预测页手动调整。模型无法预知红牌、伤病和裁判——这正是足球的魅力。</p>
+    </div>
+  </div>
+
+  <footer>
+    🐙 硅基章鱼 · 碳基看球，硅基算球<br>
+    数据基线：Elo <span id="ftElo"></span> · FIFA排名 <span id="ftFifa"></span> · 小红书 <b>@碳化硅SiC</b><br>
+    预测结果仅供娱乐参考，不构成任何竞彩建议。理性看球，热爱足球。
+  </footer>
+</div>
+
+<!-- ============ 底部导航 ============ -->
+<nav>
+  <button class="on" id="nav0" onclick="go(0)"><span class="ic">⚔️</span>预测</button>
+  <button id="nav1" onclick="go(1)"><span class="ic">📅</span>赛程</button>
+  <button id="nav2" onclick="go(2)"><span class="ic">🏆</span>冠军模拟</button>
+  <button id="nav3" onclick="go(3)"><span class="ic">🔬</span>模型</button>
+</nav>
+
+<!-- ============ 设置弹窗 ============ -->
+<div class="mask" id="mask" onclick="if(event.target===this)closeSettings()">
+  <div class="sheet">
+    <button class="modal-x" onclick="closeSettings()">✕</button>
+    <h3>🤖 AI 大模型连接</h3>
+    <p class="hint">填入任意一家的 API Key 即可解锁 AI 战术分析。推荐 DeepSeek（注册即送额度，无需信用卡）。Key 仅保存在你自己的浏览器里。</p>
+    <div class="row">
+      <label>渠道</label>
+      <select id="provSel" onchange="onProvChange()"></select>
+    </div>
+    <div class="row">
+      <label>模型</label>
+      <select id="modelSel"></select>
+    </div>
+    <div class="row">
+      <label>API Key（<a id="keyUrl" href="#" target="_blank" style="color:var(--green)">去申请 →</a>）</label>
+      <input type="password" id="keyInput" placeholder="粘贴你的 API Key">
+      <div class="key-status" id="keyStatus"></div>
+    </div>
+    <button class="btn" onclick="saveKey()">验证并保存</button>
+    <div style="height:8px"></div>
+    <button class="btn ghost" onclick="clearKey()">清除已存 Key</button>
+  </div>
+</div>
+
+<script src="core/data.js"></script>
+<script src="core/engine.js"></script>
+<script src="core/llm.js"></script>
+<script>
+"use strict";
+var D = WC_DATA, E = Engine, L = LLM;
+var WATERMARK = "小红书 @碳化硅SiC";
+var state = { knockout: false, lastPred: null, lastA: null, lastB: null, lastFused: null, lastAdj: null };
+
+/* ============ 初始化 ============ */
+function init() {
+  var groups = {};
+  Object.keys(D.teams).forEach(function (c) {
+    var g = D.teams[c].group;
+    (groups[g] = groups[g] || []).push(c);
+  });
+  ["selA", "selB"].forEach(function (id) {
+    var sel = document.getElementById(id);
+    Object.keys(groups).sort().forEach(function (g) {
+      var og = document.createElement("optgroup");
+      og.label = g + " 组";
+      groups[g].forEach(function (c) {
+        var o = document.createElement("option");
+        o.value = c; o.textContent = D.teams[c].flag + " " + D.teams[c].zh;
+        og.appendChild(o);
+      });
+      sel.appendChild(og);
+    });
+  });
+  document.getElementById("selA").value = "ARG";
+  document.getElementById("selB").value = "FRA";
+  onPick();
+  renderFixtures();
+  loadKeyUI();
+  document.getElementById("docEloDate").textContent = D.eloDate;
+  document.getElementById("ftElo").textContent = D.eloDate;
+  document.getElementById("ftFifa").textContent = D.fifaDate;
+  initProviders();
+}
+
+function onPick() {
+  var a = D.teams[document.getElementById("selA").value];
+  var b = D.teams[document.getElementById("selB").value];
+  document.getElementById("flagA").textContent = a.flag;
+  document.getElementById("flagB").textContent = b.flag;
+  document.getElementById("metaA").textContent = "Elo " + a.elo + " · FIFA #" + a.fifa + " · " + a.formation;
+  document.getElementById("metaB").textContent = "Elo " + b.elo + " · FIFA #" + b.fifa + " · " + b.formation;
+  document.getElementById("sligA").textContent = a.zh;
+  document.getElementById("sligB").textContent = b.zh;
+  document.getElementById("formA").value = a.form; document.getElementById("valA").textContent = a.form;
+  document.getElementById("formB").value = b.form; document.getElementById("valB").textContent = b.form;
+}
+
+function setMode(ko) {
+  state.knockout = ko;
+  document.getElementById("mGroup").classList.toggle("on", !ko);
+  document.getElementById("mKO").classList.toggle("on", ko);
+}
+
+function go(i) {
+  ["pg-predict", "pg-fixtures", "pg-sim", "pg-doc"].forEach(function (p, j) {
+    document.getElementById(p).classList.toggle("on", i === j);
+  });
+  for (var j = 0; j < 4; j++) document.getElementById("nav" + j).classList.toggle("on", i === j);
+  window.scrollTo(0, 0);
+}
+
+/* ============ 预测 ============ */
+function predict() {
+  var ca = document.getElementById("selA").value, cb = document.getElementById("selB").value;
+  if (ca === cb) { alert("请选择两支不同的球队"); return; }
+  var a = D.teams[ca], b = D.teams[cb];
+  var fa = parseInt(document.getElementById("formA").value, 10);
+  var fb = parseInt(document.getElementById("formB").value, 10);
+  var pred = E.predictMatch(a, b, {
+    knockout: state.knockout,
+    hostA: D.hosts.indexOf(ca) >= 0, hostB: D.hosts.indexOf(cb) >= 0,
+    formA: fa, formB: fb
+  });
+  state.lastPred = pred; state.lastA = ca; state.lastB = cb;
+  state.lastFused = null; state.lastAdj = null;
+  renderResult(a, b, pred);
+  document.getElementById("resultArea").style.display = "block";
+  // 重置 AI 区
+  document.getElementById("aiOut").style.display = "none";
+  document.getElementById("aiOut").innerHTML = "";
+  document.getElementById("aiFuse").innerHTML = "";
+  document.getElementById("aiIdle").style.display = "block";
+  document.getElementById("cardBox").style.display = "none";
+  setTimeout(function () {
+    document.getElementById("resultArea").scrollIntoView({ behavior: "smooth", block: "start" });
+  }, 80);
+}
+
+function pct(x) { return (x * 100).toFixed(1) + "%"; }
+
+function renderResult(a, b, p) {
+  document.getElementById("barW").style.width = (p.pWin * 100) + "%";
+  document.getElementById("barD").style.width = (p.pDraw * 100) + "%";
+  document.getElementById("barL").style.width = (p.pLoss * 100) + "%";
+  document.getElementById("barW").textContent = pct(p.pWin);
+  document.getElementById("barD").textContent = pct(p.pDraw);
+  document.getElementById("barL").textContent = pct(p.pLoss);
+  document.getElementById("legW").textContent = a.zh + " 胜";
+  document.getElementById("legD").textContent = "平局";
+  document.getElementById("legL").textContent = b.zh + " 胜";
+  var top = p.topScores[0];
+  document.getElementById("bigScore").textContent = top.a + " : " + top.b;
+  document.getElementById("topScores").innerHTML = p.topScores.map(function (s) {
+    return "<span>" + s.a + "-" + s.b + " <b>" + pct(s.p) + "</b></span>";
+  }).join("");
+  document.getElementById("koLine").textContent = p.knockout
+    ? "淘汰赛晋级概率：" + a.zh + " " + pct(p.pAdvanceA) + "（点球模型 " + pct(p.pPenaltyA) + "） / " + b.zh + " " + pct(1 - p.pAdvanceA)
+    : "";
+
+  // 热力图 0-5
+  var ht = document.getElementById("heatTable");
+  document.getElementById("heatA").textContent = a.zh;
+  document.getElementById("heatB").textContent = b.zh;
+  var maxP = 0;
+  for (var x = 0; x <= 5; x++) for (var y = 0; y <= 5; y++) maxP = Math.max(maxP, p.matrix[x][y]);
+  var html = "<tr><th>" + a.flag + "\\" + b.flag + "</th>";
+  for (y = 0; y <= 5; y++) html += "<th>" + y + "</th>";
+  html += "</tr>";
+  for (x = 0; x <= 5; x++) {
+    html += "<tr><th>" + x + "</th>";
+    for (y = 0; y <= 5; y++) {
+      var v = p.matrix[x][y], ratio = v / maxP;
+      var col = "rgba(0,229,160," + (ratio * 0.85).toFixed(2) + ")";
+      if (x < y) col = "rgba(139,108,255," + (ratio * 0.85).toFixed(2) + ")";
+      if (x === y) col = "rgba(255,200,98," + (ratio * 0.7).toFixed(2) + ")";
+      html += '<td style="background:' + col + '">' + (v * 100).toFixed(1) + "</td>";
+    }
+    html += "</tr>";
+  }
+  ht.innerHTML = html;
+
+  // 雷达
+  drawRadar(a, b);
+
+  // 因子
+  var f = document.getElementById("factorList");
+  var rows = [
+    ["基础 Elo", a.elo + " vs " + b.elo, p.eloA.base - p.eloB.base],
+    ["近期状态修正", fmtAdj(p.eloA.formAdj) + " / " + fmtAdj(p.eloB.formAdj), p.eloA.formAdj - p.eloB.formAdj],
+    ["东道主加成", fmtAdj(p.eloA.hostAdj) + " / " + fmtAdj(p.eloB.hostAdj), p.eloA.hostAdj - p.eloB.hostAdj],
+    ["有效 Elo 差 Δ", (p.drift > 0 ? "+" : "") + Math.round(p.drift) + "（" + (p.drift >= 0 ? a.zh : b.zh) + "占优）", p.drift],
+    ["期望进球 λ", p.lambdaA.toFixed(2) + " vs " + p.lambdaB.toFixed(2), p.lambdaA - p.lambdaB],
+    ["赛制", p.knockout ? "淘汰赛（进球×0.90 + 点球模型）" : "小组赛", 0]
+  ];
+  f.innerHTML = rows.map(function (r) {
+    var cls = r[2] > 0 ? "pos" : (r[2] < 0 ? "neg" : "neu");
+    return "<div><span>" + r[0] + "</span><span class='v " + cls + "'>" + r[1] + "</span></div>";
+  }).join("");
+}
+function fmtAdj(v) { return (v > 0 ? "+" : "") + v; }
+
+/* ============ 雷达图 ============ */
+function drawRadar(a, b) {
+  var cv = document.getElementById("radarCv"), ctx = cv.getContext("2d");
+  var W = cv.width, H = cv.height, cx = W / 2, cy = H / 2 + 6, R = Math.min(W, H) / 2 - 38;
+  ctx.clearRect(0, 0, W, H);
+  var da = E.radarData(a, D), db = E.radarData(b, D);
+  var keys = Object.keys(da), n = keys.length;
+  function pt(i, r) {
+    var ang = -Math.PI / 2 + i * 2 * Math.PI / n;
+    return [cx + r * Math.cos(ang), cy + r * Math.sin(ang)];
+  }
+  // 网格
+  ctx.strokeStyle = "rgba(38,50,89,.8)"; ctx.fillStyle = "#8b97b8"; ctx.font = "11px sans-serif";
+  for (var ring = 1; ring <= 4; ring++) {
+    ctx.beginPath();
+    for (var i = 0; i <= n; i++) { var q = pt(i % n, R * ring / 4); i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); }
+    ctx.stroke();
+  }
+  for (i = 0; i < n; i++) {
+    var q = pt(i, R), ql = pt(i, R + 20);
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(q[0], q[1]); ctx.stroke();
+    ctx.textAlign = "center"; ctx.fillText(keys[i], ql[0], ql[1] + 4);
+  }
+  // 两队多边形
+  [[da, "0,229,160"], [db, "139,108,255"]].forEach(function (pair) {
+    var d = pair[0], col = pair[1];
+    ctx.beginPath();
+    for (var i = 0; i <= n; i++) {
+      var v = d[keys[i % n]] / 100, q = pt(i % n, R * v);
+      i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]);
+    }
+    ctx.closePath();
+    ctx.fillStyle = "rgba(" + col + ",.18)"; ctx.fill();
+    ctx.strokeStyle = "rgb(" + col + ")"; ctx.lineWidth = 2; ctx.stroke();
+  });
+  document.getElementById("radarLegend").innerHTML =
+    '<span><i style="background:#00e5a0"></i>' + a.zh + "</span><span><i style='background:#8b6cff'></i>" + b.zh + "</span>";
+}
+
+/* ============ AI 分析 ============ */
+function getCfg() {
+  try { return JSON.parse(localStorage.getItem("sjzy_llm") || "null"); } catch (e) { return null; }
+}
+function runAI() {
+  var cfg = getCfg();
+  if (!cfg || !cfg.key) { openSettings(); return; }
+  if (!state.lastPred) { alert("请先生成统计预测"); return; }
+  var a = D.teams[state.lastA], b = D.teams[state.lastB];
+  var intel = document.getElementById("intelBox").value;
+  var prompt = L.buildPrompt(a, b, state.lastPred, intel, { knockout: state.knockout });
+  var out = document.getElementById("aiOut");
+  document.getElementById("aiIdle").style.display = "none";
+  out.style.display = "block";
+  out.innerHTML = '<span class="cursor"></span>';
+  var btn = document.getElementById("aiBtn");
+  L.chatStream({
+    providerId: cfg.providerId, key: cfg.key, model: cfg.model, prompt: prompt,
+    onDelta: function (chunk, full) {
+      out.innerHTML = md2html(stripJson(out._raw = (out._raw || "") + chunk)) + '<span class="cursor"></span>';
+    },
+    onDone: function (full) {
+      var adj = L.parseAdjustment(full);
+      state.lastAdj = adj;
+      out.innerHTML = md2html(stripJson(full));
+      if (adj) {
+        var fused = L.applyAdjustment(state.lastPred, adj);
+        state.lastFused = fused;
+        var az = D.teams[state.lastA].zh, bz = D.teams[state.lastB].zh;
+        document.getElementById("aiFuse").innerHTML =
+          '<div class="ai-quote">🐙 <b>' + esc(adj.quote || "AI 章鱼已开示") + "</b><br>" +
+          '<span style="font-size:.8rem">AI 预测比分 ' + esc(adj.predictedScore) + " · 信心 " + adj.confidence + "%</span></div>" +
+          '<div class="fuse-note">双引擎融合概率：' + az + " 胜 " + pct(fused.pWin) + " · 平 " + pct(fused.pDraw) + " · " + bz + " 胜 " + pct(fused.pLoss) +
+          "<br>AI 修正：" + fmtPt(adj.adjustWin) + " / " + fmtPt(adj.adjustDraw) + " / " + fmtPt(adj.adjustLoss) + "（" + esc(adj.reason) + "）</div>";
+      } else {
+        document.getElementById("aiFuse").innerHTML = '<div class="fuse-note">未解析到 AI 概率修正，以上为定性分析。</div>';
+      }
+      out._raw = "";
+    },
+    onError: function (err) {
+      out.innerHTML = '<p style="color:var(--red)">❌ AI 调用失败：' + esc(String(err.message || err)) + '</p>' +
+        '<p class="hint">常见原因：Key 无效 / 余额不足 / 该渠道浏览器跨域限制。可在 ⚙️ 中换一个渠道试试。</p>';
+      document.getElementById("aiIdle").style.display = "block";
+      out._raw = "";
+    }
+  });
+}
+function fmtPt(v) { return (v >= 0 ? "+" : "") + v.toFixed(1) + "pt"; }
+function stripJson(t) { return t.replace(/```json[\s\S]*?(```|$)/g, "").trim(); }
+function esc(s) { var d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+function md2html(t) {
+  var lines = esc(t).split("\n"), out = [], inList = false;
+  lines.forEach(function (ln) {
+    ln = ln.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+    if (/^##\s*/.test(ln)) { if (inList) { out.push("</ul>"); inList = false; } out.push("<h2>" + ln.replace(/^#+\s*/, "") + "</h2>"); }
+    else if (/^[-*]\s+/.test(ln)) { if (!inList) { out.push("<ul style='padding-left:18px'>"); inList = true; } out.push("<li>" + ln.replace(/^[-*]\s+/, "") + "</li>"); }
+    else if (ln.trim() === "") { if (inList) { out.push("</ul>"); inList = false; } }
+    else { if (inList) { out.push("</ul>"); inList = false; } out.push("<p>" + ln + "</p>"); }
+  });
+  if (inList) out.push("</ul>");
+  return out.join("");
+}
+
+/* ============ 赛程 ============ */
+function renderFixtures() {
+  var box = document.getElementById("fxList");
+  var today = new Date();
+  var todayStr = String(today.getMonth() + 1).padStart(2, "0") + "-" + String(today.getDate()).padStart(2, "0");
+  var byDay = {};
+  D.fixtures.forEach(function (fx) {
+    var day = fx.d.slice(0, 5);
+    (byDay[day] = byDay[day] || []).push(fx);
+  });
+  var html = "";
+  Object.keys(byDay).forEach(function (day) {
+    var isToday = day === todayStr;
+    html += '<div class="day-h">' + day.replace("-", " 月 ") + " 日" + (isToday ? " · 今天 🟢" : "") + "</div>";
+    byDay[day].forEach(function (fx) {
+      var a = D.teams[fx.h], b = D.teams[fx.a];
+      var res = D.results[fx.n];
+      var mid = res ? '<span class="res">' + res[0] + " : " + res[1] + "</span>" : "VS";
+      var time = fx.d.length > 5 ? fx.d.slice(6) : "已赛";
+      html += '<div class="fx' + (isToday ? " today" : "") + '" onclick="fromFixture(\'' + fx.h + "','" + fx.a + "'," + (res ? "true" : "false") + ')">' +
+        '<span class="t">' + time + "<br>" + fx.v + "</span>" +
+        '<span class="nm">' + a.zh + " " + a.flag + "</span>" +
+        '<span class="mid">' + mid + "</span>" +
+        '<span class="nm2">' + b.flag + " " + b.zh + "</span>" +
+        '<span class="g">' + fx.g + "</span></div>";
+    });
+  });
+  box.innerHTML = html;
+}
+function fromFixture(h, a) {
+  document.getElementById("selA").value = h;
+  document.getElementById("selB").value = a;
+  onPick(); setMode(false); go(0); predict();
+}
+
+/* ============ 冠军模拟 ============ */
+var simData = null;
+function runSim() {
+  var btn = document.getElementById("simBtn");
+  btn.disabled = true; btn.textContent = "🎲 模拟中…";
+  document.getElementById("simProg").style.display = "block";
+  var N = 10000, CHUNK = 1000, done = 0;
+  var agg = { champion: {}, final: {}, semi: {} };
+  function step() {
+    var r = E.simulateTournament(D, CHUNK, true);
+    ["champion", "final", "semi"].forEach(function (k) {
+      Object.keys(r[k]).forEach(function (c) { agg[k][c] = (agg[k][c] || 0) + r[k][c]; });
+    });
+    done += CHUNK;
+    document.getElementById("simProgBar").style.width = (done / N * 100) + "%";
+    if (done < N) setTimeout(step, 10);
+    else {
+      simData = { agg: agg, N: N };
+      renderSim();
+      btn.disabled = false; btn.textContent = "🎲 再模拟 10000 届";
+      document.getElementById("simProg").style.display = "none";
+    }
+  }
+  setTimeout(step, 30);
+}
+function renderSim() {
+  var agg = simData.agg, N = simData.N;
+  var rows = Object.keys(agg.champion).map(function (c) {
+    return { c: c, p: agg.champion[c] / N };
+  }).sort(function (a, b) { return b.p - a.p; }).slice(0, 12);
+  var maxP = rows[0].p;
+  document.getElementById("simMeta").textContent = "已模拟 " + N + " 届 · 已赛比分锁定";
+  document.getElementById("rankList").innerHTML = rows.map(function (r, i) {
+    var t = D.teams[r.c];
+    return '<div class="rank-row"><span class="n">' + (i + 1) + "</span><span class='f'>" + t.flag + "</span>" +
+      '<span class="nm">' + t.zh + "</span><span class='bar'><i style='width:" + (r.p / maxP * 100) + "%'></i></span>" +
+      '<span class="pc">' + (r.p * 100).toFixed(1) + "%</span></div>";
+  }).join("");
+  document.getElementById("simResult").style.display = "block";
+}
+
+/* ============ 分享卡片 ============ */
+function cardBase(cv, title) {
+  var ctx = cv.getContext("2d");
+  var W = cv.width, H = cv.height;
+  var g = ctx.createLinearGradient(0, 0, W, H);
+  g.addColorStop(0, "#0c1226"); g.addColorStop(.55, "#131b3d"); g.addColorStop(1, "#0a2a24");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  // 装饰光斑
+  var rg = ctx.createRadialGradient(W * .8, H * .12, 0, W * .8, H * .12, 420);
+  rg.addColorStop(0, "rgba(139,108,255,.30)"); rg.addColorStop(1, "transparent");
+  ctx.fillStyle = rg; ctx.fillRect(0, 0, W, H);
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#fff";
+  ctx.font = "900 56px sans-serif";
+  ctx.fillText("🐙 硅基章鱼", W / 2, 110);
+  ctx.fillStyle = "#8b97b8"; ctx.font = "32px sans-serif";
+  ctx.fillText(title, W / 2, 168);
+  return ctx;
+}
+function cardFoot(ctx, W, H) {
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#8b97b8"; ctx.font = "28px sans-serif";
+  ctx.fillText("Elo × 双泊松 × Dixon-Coles × AI 大模型", W / 2, H - 130);
+  ctx.fillStyle = "#00e5a0"; ctx.font = "700 34px sans-serif";
+  ctx.fillText(WATERMARK, W / 2, H - 78);
+  ctx.fillStyle = "#5b6685"; ctx.font = "22px sans-serif";
+  ctx.fillText("仅供娱乐 · 理性看球", W / 2, H - 38);
+}
+function makeCard() {
+  if (!state.lastPred) return;
+  var a = D.teams[state.lastA], b = D.teams[state.lastB], p = state.lastPred;
+  var fused = state.lastFused, adj = state.lastAdj;
+  var cv = document.createElement("canvas");
+  cv.width = 1080; cv.height = 1440;
+  var ctx = cardBase(cv, "2026 美加墨世界杯 · AI 预测卡");
+  var W = 1080;
+  // 对阵
+  ctx.font = "120px sans-serif";
+  ctx.fillText(a.flag, W * .27, 400); ctx.fillText(b.flag, W * .73, 400);
+  ctx.fillStyle = "#fff"; ctx.font = "900 52px sans-serif";
+  ctx.fillText(a.zh, W * .27, 488); ctx.fillText(b.zh, W * .73, 488);
+  ctx.fillStyle = "#8b6cff"; ctx.font = "900 60px sans-serif"; ctx.fillText("VS", W / 2, 420);
+  ctx.fillStyle = "#8b97b8"; ctx.font = "26px sans-serif";
+  ctx.fillText("Elo " + a.elo + " · " + a.formation, W * .27, 530);
+  ctx.fillText("Elo " + b.elo + " · " + b.formation, W * .73, 530);
+  // 比分
+  var top = p.topScores[0];
+  var grad = ctx.createLinearGradient(W * .3, 0, W * .7, 0);
+  grad.addColorStop(0, "#00e5a0"); grad.addColorStop(1, "#8b6cff");
+  ctx.fillStyle = grad; ctx.font = "900 170px sans-serif";
+  var scoreStr = adj && adj.predictedScore ? adj.predictedScore.replace("-", " : ") : top.a + " : " + top.b;
+  ctx.fillText(scoreStr, W / 2, 740);
+  ctx.fillStyle = "#8b97b8"; ctx.font = "30px sans-serif";
+  ctx.fillText(adj ? "AI 融合预测比分" : "模型最可能比分（" + pct(top.p) + "）", W / 2, 800);
+  // 概率条
+  var pw = fused ? fused.pWin : p.pWin, pd = fused ? fused.pDraw : p.pDraw, pl = fused ? fused.pLoss : p.pLoss;
+  var bx = 90, bw = W - 180, by = 880, bh = 64;
+  ctx.fillStyle = "#00e5a0"; ctx.fillRect(bx, by, bw * pw, bh);
+  ctx.fillStyle = "#67719a"; ctx.fillRect(bx + bw * pw, by, bw * pd, bh);
+  ctx.fillStyle = "#8b6cff"; ctx.fillRect(bx + bw * (pw + pd), by, bw * pl, bh);
+  ctx.fillStyle = "#07101f"; ctx.font = "700 30px sans-serif";
+  if (pw > .12) ctx.fillText(pct(pw), bx + bw * pw / 2, by + 42);
+  if (pd > .12) ctx.fillText(pct(pd), bx + bw * (pw + pd / 2), by + 42);
+  if (pl > .12) ctx.fillText(pct(pl), bx + bw * (pw + pd + pl / 2), by + 42);
+  ctx.fillStyle = "#c6cee6"; ctx.font = "30px sans-serif";
+  ctx.textAlign = "left"; ctx.fillText(a.zh + " 胜", bx, by + 110);
+  ctx.textAlign = "right"; ctx.fillText(b.zh + " 胜", bx + bw, by + 110);
+  ctx.textAlign = "center"; ctx.fillText("平", bx + bw * (pw + pd / 2), by + 110);
+  // 金句
+  if (adj && adj.quote) {
+    ctx.fillStyle = "rgba(139,108,255,.15)";
+    roundRect(ctx, 80, 1060, W - 160, 120, 24); ctx.fill();
+    ctx.strokeStyle = "#8b6cff"; ctx.lineWidth = 2; roundRect(ctx, 80, 1060, W - 160, 120, 24); ctx.stroke();
+    ctx.fillStyle = "#e8ecf8"; ctx.font = "700 36px sans-serif";
+    ctx.fillText("🐙 “" + adj.quote.slice(0, 22) + "”", W / 2, 1135);
+  } else {
+    ctx.fillStyle = "#5b6685"; ctx.font = "28px sans-serif";
+    ctx.fillText("接入 AI 大模型可解锁战术分析与章鱼金句", W / 2, 1120);
+  }
+  cardFoot(ctx, W, 1440);
+  document.getElementById("cardImg").src = cv.toDataURL("image/png");
+  document.getElementById("cardBox").style.display = "block";
+  setTimeout(function () { document.getElementById("cardBox").scrollIntoView({ behavior: "smooth" }); }, 60);
+}
+function makeSimCard() {
+  if (!simData) return;
+  var cv = document.createElement("canvas");
+  cv.width = 1080; cv.height = 1440;
+  var ctx = cardBase(cv, "AI 模拟了 10000 届世界杯");
+  var W = 1080;
+  ctx.fillStyle = "#ffc862"; ctx.font = "900 64px sans-serif";
+  ctx.fillText("👑 夺冠概率排行榜", W / 2, 280);
+  var rows = Object.keys(simData.agg.champion).map(function (c) {
+    return { c: c, p: simData.agg.champion[c] / simData.N };
+  }).sort(function (a, b) { return b.p - a.p; }).slice(0, 10);
+  var maxP = rows[0].p, y0 = 380, rh = 78;
+  rows.forEach(function (r, i) {
+    var t = D.teams[r.c], y = y0 + i * rh;
+    ctx.textAlign = "left";
+    ctx.fillStyle = i < 3 ? "#ffc862" : "#8b97b8"; ctx.font = "700 34px sans-serif";
+    ctx.fillText(String(i + 1).padStart(2, "0"), 90, y + 40);
+    ctx.font = "44px sans-serif"; ctx.fillText(t.flag, 160, y + 44);
+    ctx.fillStyle = "#e8ecf8"; ctx.font = "700 36px sans-serif"; ctx.fillText(t.zh, 232, y + 42);
+    var bx = 460, bw = 420;
+    ctx.fillStyle = "rgba(255,255,255,.08)"; roundRect(ctx, bx, y + 8, bw, 40, 12); ctx.fill();
+    var g = ctx.createLinearGradient(bx, 0, bx + bw, 0);
+    g.addColorStop(0, "#00e5a0"); g.addColorStop(1, "#8b6cff");
+    ctx.fillStyle = g; roundRect(ctx, bx, y + 8, Math.max(24, bw * r.p / maxP), 40, 12); ctx.fill();
+    ctx.fillStyle = "#00e5a0"; ctx.font = "700 34px sans-serif"; ctx.textAlign = "right";
+    ctx.fillText((r.p * 100).toFixed(1) + "%", W - 80, y + 42);
+    ctx.textAlign = "center";
+  });
+  cardFoot(ctx, W, 1440);
+  document.getElementById("simCardImg").src = cv.toDataURL("image/png");
+  document.getElementById("simCardBox").style.display = "block";
+}
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+/* ============ 设置 ============ */
+function initProviders() {
+  var sel = document.getElementById("provSel");
+  L.PROVIDERS.forEach(function (p) {
+    var o = document.createElement("option");
+    o.value = p.id; o.textContent = p.name;
+    sel.appendChild(o);
+  });
+  var cfg = getCfg();
+  if (cfg) sel.value = cfg.providerId;
+  onProvChange();
+  if (cfg) {
+    document.getElementById("modelSel").value = cfg.model;
+    document.getElementById("keyInput").value = cfg.key;
+  }
+}
+function onProvChange() {
+  var p = L.getProvider(document.getElementById("provSel").value);
+  var ms = document.getElementById("modelSel");
+  ms.innerHTML = "";
+  p.models.forEach(function (m) {
+    var o = document.createElement("option"); o.value = m; o.textContent = m; ms.appendChild(o);
+  });
+  document.getElementById("keyUrl").href = p.keyUrl;
+}
+function openSettings() { document.getElementById("mask").classList.add("on"); }
+function closeSettings() { document.getElementById("mask").classList.remove("on"); }
+function saveKey() {
+  var providerId = document.getElementById("provSel").value;
+  var model = document.getElementById("modelSel").value;
+  var key = document.getElementById("keyInput").value.trim();
+  var st = document.getElementById("keyStatus");
+  if (!key) { st.innerHTML = '<span style="color:var(--red)">请先粘贴 Key</span>'; return; }
+  st.innerHTML = '<span style="color:var(--gold)">验证中…</span>';
+  L.verifyKey(providerId, key).then(function () {
+    localStorage.setItem("sjzy_llm", JSON.stringify({ providerId: providerId, model: model, key: key }));
+    st.innerHTML = '<span style="color:var(--green)">✅ 验证成功，已保存（仅存本机浏览器）</span>';
+    loadKeyUI();
+    setTimeout(closeSettings, 900);
+  }).catch(function (e) {
+    st.innerHTML = '<span style="color:var(--red)">❌ ' + esc(String(e.message || e).slice(0, 120)) + "</span>";
+  });
+}
+function clearKey() {
+  localStorage.removeItem("sjzy_llm");
+  document.getElementById("keyInput").value = "";
+  document.getElementById("keyStatus").innerHTML = "已清除";
+  loadKeyUI();
+}
+function loadKeyUI() {
+  var cfg = getCfg();
+  var gear = document.getElementById("gearBtn");
+  var tag = document.getElementById("aiTag");
+  if (cfg && cfg.key) {
+    gear.classList.add("on"); gear.textContent = "🤖 已连接";
+    tag.textContent = L.getProvider(cfg.providerId).name;
+    tag.style.color = "var(--green)";
+  } else {
+    gear.classList.remove("on"); gear.textContent = "⚙️ AI";
+    tag.textContent = "未连接";
+  }
+}
+
+init();
+</script>
+</body>
+</html>
