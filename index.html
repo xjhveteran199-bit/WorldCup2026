@@ -295,6 +295,8 @@ footer b { color: var(--green); }
       <p>采用 eloratings.net 的世界足球 Elo 评分（数据基线 <code id="docEloDate"></code>）。Elo 是国际象棋起源的实力量化体系，每场比赛后根据胜负、比分差和比赛权重动态更新，比 FIFA 排名更灵敏。两队相遇时的胜负期望：</p>
       <div class="formula">W<sub>e</sub> = 1 / (1 + 10<sup>−Δ/400</sup>)</div>
       <p>Δ 为有效 Elo 差 = 基础 Elo 差 + 东道主加成（+100，美加墨适用）+ 近期状态修正（±50 封顶）。</p>
+      <h4>① b 实时评分：用真实赛果动态修正</h4>
+      <p>每当一场比赛踢完，模型立刻按 Elo 公式更新双方评分：<code>新Elo = 旧Elo + K×净胜球权重×(实际结果 − 期望)</code>（K=60）。<b>赢强队加分多、赢弱旅加分少</b>——例如韩国 2-1 力克同档捷克，实时 Elo +28；墨西哥 2-0 完胜实力较弱的南非，仅 +10。同时由实战积分与净胜球重算「近期状态」，与赛前评估各占一半。于是赛事越往后，预测越贴合球队的真实当下状态，每场结果都会反映到后续所有预测与冠军概率里。</p>
       <h4>② 双泊松进球模型</h4>
       <p>足球比赛进球数近似服从泊松分布。我们把 Elo 差映射为两队期望进球：</p>
       <div class="formula">λ = 1.30 × e<sup>0.0011·Δ</sup></div>
@@ -391,16 +393,25 @@ function init() {
 }
 
 function onPick() {
-  var a = D.teams[document.getElementById("selA").value];
-  var b = D.teams[document.getElementById("selB").value];
+  var ca = document.getElementById("selA").value, cb = document.getElementById("selB").value;
+  var a = D.teams[ca], b = D.teams[cb];
+  var live = E.computeLiveRatings(D), la = live[ca], lb = live[cb];
   document.getElementById("flagA").textContent = a.flag;
   document.getElementById("flagB").textContent = b.flag;
-  document.getElementById("metaA").textContent = "Elo " + a.elo + " · FIFA #" + a.fifa + " · " + a.formation;
-  document.getElementById("metaB").textContent = "Elo " + b.elo + " · FIFA #" + b.fifa + " · " + b.formation;
+  document.getElementById("metaA").textContent = liveMeta(a, la);
+  document.getElementById("metaB").textContent = liveMeta(b, lb);
   document.getElementById("sligA").textContent = a.zh;
   document.getElementById("sligB").textContent = b.zh;
-  document.getElementById("formA").value = a.form; document.getElementById("valA").textContent = a.form;
-  document.getElementById("formB").value = b.form; document.getElementById("valB").textContent = b.form;
+  // 状态滑块默认用「真实赛果修正后」的实时状态
+  document.getElementById("formA").value = la.form; document.getElementById("valA").textContent = la.form;
+  document.getElementById("formB").value = lb.form; document.getElementById("valB").textContent = lb.form;
+}
+function liveMeta(t, L) {
+  var elo = L.played > 0
+    ? "Elo " + L.elo + "(" + (L.eloDelta >= 0 ? "+" : "") + L.eloDelta + ")"
+    : "Elo " + t.elo;
+  var rec = L.played > 0 ? " · " + L.w + "胜" + L.d + "平" + L.l + "负" : "";
+  return elo + " · FIFA #" + t.fifa + " · " + t.formation + rec;
 }
 
 function setMode(ko) {
@@ -421,7 +432,9 @@ function go(i) {
 function predict() {
   var ca = document.getElementById("selA").value, cb = document.getElementById("selB").value;
   if (ca === cb) { alert("请选择两支不同的球队"); return; }
-  var a = D.teams[ca], b = D.teams[cb];
+  // 用真实赛果动态修正实力评分
+  var live = E.computeLiveRatings(D);
+  var a = E.liveTeam(D.teams[ca], live[ca]), b = E.liveTeam(D.teams[cb], live[cb]);
   var fa = parseInt(document.getElementById("formA").value, 10);
   var fb = parseInt(document.getElementById("formB").value, 10);
   var pred = E.predictMatch(a, b, {
@@ -429,6 +442,7 @@ function predict() {
     hostA: D.hosts.indexOf(ca) >= 0, hostB: D.hosts.indexOf(cb) >= 0,
     formA: fa, formB: fb
   });
+  pred.liveA = live[ca]; pred.liveB = live[cb];
   state.lastPred = pred; state.lastA = ca; state.lastB = cb;
   state.lastFused = null; state.lastAdj = null;
   renderResult(a, b, pred);
@@ -492,14 +506,23 @@ function renderResult(a, b, p) {
 
   // 因子
   var f = document.getElementById("factorList");
+  var la = p.liveA || { played: 0, eloDelta: 0 }, lb = p.liveB || { played: 0, eloDelta: 0 };
+  var eloLabel = (la.played || lb.played) ? "实时 Elo（含赛果修正）" : "基础 Elo";
+  var eloVal = a.elo + (la.eloDelta ? "(" + (la.eloDelta >= 0 ? "+" : "") + la.eloDelta + ")" : "")
+    + " vs " + b.elo + (lb.eloDelta ? "(" + (lb.eloDelta >= 0 ? "+" : "") + lb.eloDelta + ")" : "");
   var rows = [
-    ["基础 Elo", a.elo + " vs " + b.elo, p.eloA.base - p.eloB.base],
+    [eloLabel, eloVal, p.eloA.base - p.eloB.base]
+  ];
+  if (la.played || lb.played) {
+    rows.push(["已结合赛果", (a.zh + " " + la.played + "场 / " + b.zh + " " + lb.played + "场"), 0]);
+  }
+  rows.push(
     ["近期状态修正", fmtAdj(p.eloA.formAdj) + " / " + fmtAdj(p.eloB.formAdj), p.eloA.formAdj - p.eloB.formAdj],
     ["东道主加成", fmtAdj(p.eloA.hostAdj) + " / " + fmtAdj(p.eloB.hostAdj), p.eloA.hostAdj - p.eloB.hostAdj],
     ["有效 Elo 差 Δ", (p.drift > 0 ? "+" : "") + Math.round(p.drift) + "（" + (p.drift >= 0 ? a.zh : b.zh) + "占优）", p.drift],
     ["期望进球 λ", p.lambdaA.toFixed(2) + " vs " + p.lambdaB.toFixed(2), p.lambdaA - p.lambdaB],
     ["赛制", p.knockout ? "淘汰赛（进球×0.90 + 点球模型）" : "小组赛", 0]
-  ];
+  );
   f.innerHTML = rows.map(function (r) {
     var cls = r[2] > 0 ? "pos" : (r[2] < 0 ? "neg" : "neu");
     return "<div><span>" + r[0] + "</span><span class='v " + cls + "'>" + r[1] + "</span></div>";
@@ -554,7 +577,9 @@ function runAI() {
   var cfg = getCfg();
   if (!cfg || !cfg.key) { openSettings(); return; }
   if (!state.lastPred) { alert("请先生成统计预测"); return; }
-  var a = D.teams[state.lastA], b = D.teams[state.lastB];
+  // 用实时评分球队（含赛果修正的 Elo/状态）喂给 AI
+  var a = E.liveTeam(D.teams[state.lastA], state.lastPred.liveA);
+  var b = E.liveTeam(D.teams[state.lastB], state.lastPred.liveB);
   var intel = document.getElementById("intelBox").value;
   var prompt = L.buildPrompt(a, b, state.lastPred, intel, { knockout: state.knockout });
   var out = document.getElementById("aiOut");

@@ -72,12 +72,14 @@ Page({
   },
 
   refreshMeta() {
-    const a = WC.teams[this.data.teamList[this.data.idxA].code];
-    const b = WC.teams[this.data.teamList[this.data.idxB].code];
+    const ca = this.data.teamList[this.data.idxA].code;
+    const cb = this.data.teamList[this.data.idxB].code;
+    const a = WC.teams[ca], b = WC.teams[cb];
+    const live = E.computeLiveRatings(WC);
     this.setData({
       aZh: a.zh, bZh: b.zh, aFlag: a.flag, bFlag: b.flag,
-      aMeta: 'Elo ' + a.elo + ' · FIFA#' + a.fifa + ' · ' + a.formation,
-      bMeta: 'Elo ' + b.elo + ' · FIFA#' + b.fifa + ' · ' + b.formation
+      aMeta: liveMeta(a, live[ca]),
+      bMeta: liveMeta(b, live[cb])
     });
   },
 
@@ -90,12 +92,14 @@ Page({
     const ca = this.data.teamList[this.data.idxA].code;
     const cb = this.data.teamList[this.data.idxB].code;
     if (ca === cb) { wx.showToast({ title: '请选择两支不同球队', icon: 'none' }); return; }
-    const a = WC.teams[ca], b = WC.teams[cb];
+    const live = E.computeLiveRatings(WC);
+    const a = E.liveTeam(WC.teams[ca], live[ca]), b = E.liveTeam(WC.teams[cb], live[cb]);
     const pred = E.predictMatch(a, b, {
       knockout: this.data.knockout,
       hostA: WC.hosts.indexOf(ca) >= 0, hostB: WC.hosts.indexOf(cb) >= 0
     });
-    this._pred = pred; this._ca = ca; this._cb = cb;
+    pred.liveA = live[ca]; pred.liveB = live[cb];
+    this._pred = pred; this._ca = ca; this._cb = cb; this._liveA = a; this._liveB = b;
 
     // 热力图 0-5（带颜色）
     let maxP = 0;
@@ -119,14 +123,21 @@ Page({
     const dims = Object.keys(da).map(k => ({ name: k, a: da[k], b: db[k] }));
 
     // 因子
+    const la = live[ca], lb = live[cb];
+    const hasResult = la.played || lb.played;
+    const eloVal = a.elo + (la.eloDelta ? '(' + fmt(la.eloDelta) + ')' : '') +
+      ' vs ' + b.elo + (lb.eloDelta ? '(' + fmt(lb.eloDelta) + ')' : '');
     const factors = [
-      { k: '基础 Elo', v: a.elo + ' vs ' + b.elo, cls: pred.eloA.base - pred.eloB.base > 0 ? 'pos' : 'neg' },
+      { k: hasResult ? '实时Elo(含赛果)' : '基础 Elo', v: eloVal, cls: pred.eloA.base - pred.eloB.base > 0 ? 'pos' : 'neg' }
+    ];
+    if (hasResult) factors.push({ k: '已结合赛果', v: a.zh + ' ' + la.played + '场 / ' + b.zh + ' ' + lb.played + '场', cls: 'neu' });
+    factors.push(
       { k: '状态修正', v: fmt(pred.eloA.formAdj) + ' / ' + fmt(pred.eloB.formAdj), cls: 'neu' },
       { k: '东道主加成', v: fmt(pred.eloA.hostAdj) + ' / ' + fmt(pred.eloB.hostAdj), cls: pred.eloA.hostAdj ? 'pos' : 'neu' },
       { k: '有效Elo差 Δ', v: (pred.drift > 0 ? '+' : '') + Math.round(pred.drift), cls: pred.drift > 0 ? 'pos' : 'neg' },
       { k: '期望进球 λ', v: pred.lambdaA.toFixed(2) + ' vs ' + pred.lambdaB.toFixed(2), cls: 'neu' },
       { k: '赛制', v: pred.knockout ? '淘汰赛(含点球)' : '小组赛', cls: 'neu' }
-    ];
+    );
 
     const top = pred.topScores[0];
     this.setData({
@@ -153,7 +164,7 @@ Page({
       return;
     }
     if (!this._pred) { wx.showToast({ title: '请先生成预测', icon: 'none' }); return; }
-    const a = WC.teams[this._ca], b = WC.teams[this._cb];
+    const a = this._liveA || WC.teams[this._ca], b = this._liveB || WC.teams[this._cb];
     const prompt = L.buildPrompt(a, b, this._pred, this.data.intel, { knockout: this.data.knockout });
     this.setData({ aiState: 'running' });
     L.chat({ providerId: cfg.providerId, key: cfg.key, model: cfg.model, prompt })
@@ -234,6 +245,11 @@ Page({
 
 function fmt(v) { return (v > 0 ? '+' : '') + v; }
 function fmtPt(v) { return (v >= 0 ? '+' : '') + v.toFixed(1) + 'pt'; }
+function liveMeta(t, L) {
+  const elo = (L && L.played > 0) ? 'Elo ' + L.elo + '(' + fmt(L.eloDelta) + ')' : 'Elo ' + t.elo;
+  const rec = (L && L.played > 0) ? ' · ' + L.w + '胜' + L.d + '平' + L.l + '负' : '';
+  return elo + ' · FIFA#' + t.fifa + ' · ' + t.formation + rec;
+}
 
 // 简易 markdown 分节
 function parseSections(text) {

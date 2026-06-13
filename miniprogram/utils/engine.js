@@ -105,6 +105,67 @@
 
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
+  var ELO_K = 60;              // 世界杯赛事权重（FIFA/eloratings 体系）
+  var FORM_BLEND = 0.5;        // 实时状态 = 0.5×赛前评估 + 0.5×实战表现
+
+  /**
+   * 根据 data.results 里已结束的比赛，动态更新每支球队的实时 Elo 与近期状态。
+   * 每场比赛后按 Elo 公式 + 净胜球权重更新评分，并由实战积分/净胜球重算 form。
+   * 返回 { [code]: { elo, baseElo, eloDelta, form, baseForm, played, w, d, l, gf, ga, recent } }
+   */
+  function computeLiveRatings(data) {
+    var R = {};
+    Object.keys(data.teams).forEach(function (c) {
+      var t = data.teams[c];
+      R[c] = { elo: t.elo, baseElo: t.elo, baseForm: t.form,
+               played: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, recent: [] };
+    });
+    // 按赛程顺序逐场套用真实结果
+    data.fixtures.forEach(function (fx) {
+      var res = data.results && data.results[fx.n];
+      if (!res) return;
+      var h = R[fx.h], a = R[fx.a];
+      if (!h || !a) return;
+      var gh = res[0], ga = res[1];
+      var dr = h.elo - a.elo;
+      var we = 1 / (1 + Math.pow(10, -dr / 400));
+      var S = gh > ga ? 1 : (gh < ga ? 0 : 0.5);
+      // 净胜球权重（大胜更能体现实力差）
+      var gd = Math.abs(gh - ga);
+      var gdMul = gd <= 1 ? 1 : (gd === 2 ? 1.5 : (11 + gd) / 8);
+      var delta = ELO_K * gdMul * (S - we);
+      h.elo += delta; a.elo -= delta;
+      h.played++; a.played++;
+      h.gf += gh; h.ga += ga; a.gf += ga; a.ga += gh;
+      if (gh > ga) { h.w++; a.l++; } else if (gh < ga) { h.l++; a.w++; } else { h.d++; a.d++; }
+      h.recent.push({ pts: gh > ga ? 3 : (gh === ga ? 1 : 0), gd: gh - ga });
+      a.recent.push({ pts: ga > gh ? 3 : (gh === ga ? 1 : 0), gd: ga - gh });
+    });
+    // 由实战表现重算 form，与赛前评估融合
+    Object.keys(R).forEach(function (c) {
+      var r = R[c];
+      if (r.played === 0) { r.form = r.baseForm; r.eloDelta = 0; r.elo = Math.round(r.elo); return; }
+      var ppg = r.recent.reduce(function (s, m) { return s + m.pts; }, 0) / r.played; // 0~3
+      var gdAvg = r.recent.reduce(function (s, m) { return s + m.gd; }, 0) / r.played;
+      var perf = clamp(55 + ppg * 12 + gdAvg * 4, 40, 98);
+      r.form = Math.round(FORM_BLEND * r.baseForm + (1 - FORM_BLEND) * perf);
+      r.eloDelta = Math.round(r.elo - r.baseElo);
+      r.elo = Math.round(r.elo);
+    });
+    return R;
+  }
+
+  /** 构造一个套用实时评分的球队对象（用于 predictMatch） */
+  function liveTeam(team, liveRow) {
+    if (!liveRow) return team;
+    var o = {};
+    for (var k in team) if (team.hasOwnProperty(k)) o[k] = team[k];
+    o.elo = liveRow.elo; o.form = liveRow.form;
+    o._eloDelta = liveRow.eloDelta; o._played = liveRow.played;
+    o._record = liveRow.w + '胜' + liveRow.d + '平' + liveRow.l + '负';
+    return o;
+  }
+
   /** 从比分矩阵采样一个比分 [x, y] */
   function sampleScore(matrix, rng) {
     var r = (rng || Math.random)(), acc = 0;
@@ -130,11 +191,13 @@
     var teams = data.teams;
     var champion = {}, finalApp = {}, semiApp = {};
     var matrixCache = {};
+    // 用真实结果动态修正后的实时评分，作为未赛场次的预测基础
+    var live = computeLiveRatings(data);
 
     function getMatrix(hCode, aCode, knockout) {
       var key = hCode + "|" + aCode + "|" + (knockout ? 1 : 0);
       if (!matrixCache[key]) {
-        matrixCache[key] = predictMatch(teams[hCode], teams[aCode], {
+        matrixCache[key] = predictMatch(liveTeam(teams[hCode], live[hCode]), liveTeam(teams[aCode], live[aCode]), {
           knockout: knockout,
           hostA: data.hosts.indexOf(hCode) >= 0,
           hostB: data.hosts.indexOf(aCode) >= 0
@@ -245,7 +308,11 @@
   }
   function codeOf(t, data) {
     var codes = Object.keys(data.teams);
-    for (var i = 0; i < codes.length; i++) if (data.teams[codes[i]] === t) return codes[i];
+    // zh 队名唯一，兼容实时评分生成的球队副本
+    for (var i = 0; i < codes.length; i++) {
+      var dt = data.teams[codes[i]];
+      if (dt === t || dt.zh === t.zh) return codes[i];
+    }
     return null;
   }
 
@@ -264,6 +331,25 @@
       var r = simulateTournament(data, 200);
       var tot = 0; Object.keys(r.champion).forEach(function (k) { tot += r.champion[k]; });
       console.assert(tot === 200, "模拟次数守恒, 实际 " + tot);
+      // 实时评分自检：胜者 Elo 应升、负者应降，未赛球队保持基准
+      var live = computeLiveRatings(data);
+      var anyPlayed = false;
+      Object.keys(live).forEach(function (c) {
+        var L = live[c];
+        if (L.played === 0) { console.assert(L.eloDelta === 0, c + " 未赛却变动了 Elo"); }
+        else { anyPlayed = true; console.assert(L.form >= 40 && L.form <= 98, c + " form 越界"); }
+      });
+      // 已赛场次的胜者 eloDelta 应 > 负者
+      if (data.results) {
+        var firstN = Object.keys(data.results)[0];
+        if (firstN) {
+          var fx = null; data.fixtures.forEach(function (f) { if (f.n == firstN) fx = f; });
+          if (fx) {
+            var rr = data.results[firstN];
+            if (rr[0] > rr[1]) console.assert(live[fx.h].eloDelta > live[fx.a].eloDelta, "胜者实时Elo应更高");
+          }
+        }
+      }
     }
     console.log("✅ engine self-test passed");
   }
@@ -271,6 +357,8 @@
   var Engine = {
     predictMatch: predictMatch,
     simulateTournament: simulateTournament,
+    computeLiveRatings: computeLiveRatings,
+    liveTeam: liveTeam,
     radarData: radarData,
     sampleScore: sampleScore,
     selfTest: selfTest,
