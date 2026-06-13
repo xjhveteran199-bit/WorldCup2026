@@ -1,4 +1,4 @@
-const WC = require('../../utils/data.js');
+const WC = require('../../utils/wc.js').current();
 const E = require('../../utils/engine.js');
 
 function pct(x) { return (x * 100).toFixed(1) + '%'; }

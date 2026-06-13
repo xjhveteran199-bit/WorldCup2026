@@ -1,4 +1,4 @@
-const WC = require('../../utils/data.js');
+const WC = require('../../utils/wc.js').current();
 
 Page({
   data: { days: [] },

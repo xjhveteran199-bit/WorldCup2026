@@ -11,9 +11,10 @@
 ## 二、提审前必做的后台配置（微信公众平台 mp.weixin.qq.com）
 
 ### 1. request 合法域名（开发管理 → 开发设置 → 服务器域名）
-把以下国产大模型 API 域名加入 **request 合法域名**白名单（均为 HTTPS、已 ICP 备案）：
+把以下域名加入 **request 合法域名**白名单：
 
 ```
+https://worldcup2026-blond.vercel.app   ← 远程数据端点（每天自动更新的比分）
 https://api.deepseek.com
 https://api.moonshot.cn
 https://open.bigmodel.cn
@@ -22,6 +23,8 @@ https://api.minimaxi.com
 ```
 
 > Gemini 域名无法备案，故小程序版不含 Gemini（网页版才有）。
+
+**数据自动更新机制（无需重新提审）**：小程序启动时从 `worldcup2026-blond.vercel.app/data.json` 拉取最新比分，缓存到本地，下次冷启动生效（stale-while-revalidate）；拉取失败则用打包的 `utils/data.js` 兜底。网页版的每日定时任务会同步更新这个 data.json，所以**小程序发布一次后，后续比分更新无需再提审**。若 Vercel 在国内访问不稳定，用户会看到打包数据（最近一次发版时的数据），功能不受影响。
 
 ### 2. 基本信息
 - **名称**：`硅基看球-2026美加墨`（备选 `章鱼算球·2026美加墨`）

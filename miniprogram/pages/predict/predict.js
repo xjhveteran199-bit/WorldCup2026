@@ -1,4 +1,4 @@
-const WC = require('../../utils/data.js');
+const WC = require('../../utils/wc.js').current();
 const E = require('../../utils/engine.js');
 const L = require('../../utils/llm.js');
 const app = getApp();
@@ -38,7 +38,9 @@ Page({
     aiQuote: '', aiScore: '', aiConfidence: 0, aiReason: '',
     fused: null,
     aiTag: '未连接',
-    sharePath: ''
+    sharePath: '',
+    dataDate: WC.updated,
+    resultsCount: Object.keys(WC.results || {}).length
   },
 
   onLoad(opts) {

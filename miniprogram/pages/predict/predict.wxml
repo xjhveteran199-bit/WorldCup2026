@@ -128,7 +128,7 @@
 
   <view class="disclaimer">
     <view>🐙 硅基看球 · 碳基看球，硅基算球</view>
-    <view>数据：Elo 2026-06-10 · 小红书 <text class="em">@碳化硅SiC</text></view>
+    <view>数据更新 {{dataDate}} · 已录入 {{resultsCount}} 场赛果 · 小红书 <text class="em">@碳化硅SiC</text></view>
     <view>预测仅供娱乐参考，不构成任何竞彩建议。理性看球，热爱足球。</view>
   </view>
 </view>
