@@ -169,6 +169,27 @@ canvas.radar { display: block; margin: 0 auto; }
 
 footer { text-align: center; color: var(--sub); font-size: .68rem; padding: 24px 14px 10px; line-height: 1.8; }
 footer b { color: var(--green); }
+
+/* ---------- 自动演示模式 ---------- */
+.demo-mode nav { display: none; }
+.demo-mode { padding-bottom: 0; }
+.demo-mode .gear { display: none; }
+#demoStart { position: fixed; inset: 0; z-index: 200; background: rgba(10,4,6,.92);
+  display: flex; align-items: center; justify-content: center; backdrop-filter: blur(6px); }
+#demoStart .ds-card { text-align: center; padding: 30px; }
+#demoStart .ds-vs { font-size: 3rem; letter-spacing: 4px; }
+#demoStart .ds-vs b { font-style: italic; font-size: 2rem;
+  background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+#demoStart .ds-name { font-size: 1.2rem; font-weight: 800; margin: 12px 0 22px; }
+#demoStart .ds-hint { color: var(--sub); font-size: .8rem; margin-top: 12px; }
+#demoCap { position: fixed; left: 0; right: 0; bottom: 8%; z-index: 190; text-align: center;
+  padding: 0 24px; opacity: 0; transition: opacity .3s; pointer-events: none; }
+#demoCap.show { opacity: 1; }
+#demoCap { font-size: 1.55rem; font-weight: 900; font-style: italic; color: #fff;
+  text-shadow: 0 2px 12px rgba(0,0,0,.85), 0 0 30px rgba(255,61,46,.5); }
+.demo-mode .prob-bar div { transition: width 1s cubic-bezier(.2,.8,.2,1); }
+@keyframes demopulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+.demo-mode #bigScore { animation: demopulse 1.2s ease 2; }
 </style>
 </head>
 <body>
@@ -352,9 +373,9 @@ footer b { color: var(--green); }
   </div>
 </div>
 
-<script src="core/data.js?v=20260613-2"></script>
-<script src="core/engine.js?v=20260613-2"></script>
-<script src="core/llm.js?v=20260613-2"></script>
+<script src="core/data.js?v=20260613-3"></script>
+<script src="core/engine.js?v=20260613-3"></script>
+<script src="core/llm.js?v=20260613-3"></script>
 <script>
 "use strict";
 var D = WC_DATA, E = Engine, L = LLM;
@@ -390,6 +411,92 @@ function init() {
   document.getElementById("ftElo").textContent = D.eloDate;
   document.getElementById("ftFifa").textContent = D.fifaDate;
   initProviders();
+  maybeStartDemo();
+}
+
+/* ============ 自动演示模式（录屏用） ============ */
+// URL: ?demo=BRA-MAR  → 自动演示巴西vs摩洛哥；&caps=1 开字幕浮层；&speed=1.3 调速
+function maybeStartDemo() {
+  var qs = new URLSearchParams(location.search);
+  var demo = qs.get("demo");
+  if (!demo) return;
+  var parts = demo.toUpperCase().split("-");
+  var home = parts[0], away = parts[1];
+  if (!D.teams[home] || !D.teams[away]) return;
+  DEMO.caps = qs.get("caps") === "1";
+  DEMO.speed = parseFloat(qs.get("speed")) || 1;
+  document.body.classList.add("demo-mode");
+  // 预置对阵，等用户开录屏后点开始
+  document.getElementById("selA").value = home;
+  document.getElementById("selB").value = away;
+  onPick();
+  var ov = document.createElement("div");
+  ov.id = "demoStart";
+  ov.innerHTML = '<div class="ds-card">' +
+    '<div class="ds-vs">' + D.teams[home].flag + ' <b>VS</b> ' + D.teams[away].flag + '</div>' +
+    '<div class="ds-name">' + D.teams[home].zh + ' 对 ' + D.teams[away].zh + '</div>' +
+    '<button class="btn" onclick="startDemo(\'' + home + '\',\'' + away + '\')">▶︎ 开录屏后点这里</button>' +
+    '<div class="ds-hint">点击后自动演示约 32 秒</div></div>';
+  document.body.appendChild(ov);
+  // 字幕浮层
+  var cap = document.createElement("div");
+  cap.id = "demoCap"; document.body.appendChild(cap);
+}
+
+var DEMO = { caps: false, speed: 1, timers: [] };
+function dt(ms) { return Math.round(ms / DEMO.speed); }
+function demoCaption(text, ms) {
+  if (!DEMO.caps) return;
+  var cap = document.getElementById("demoCap");
+  if (!cap) return;
+  cap.textContent = text; cap.classList.add("show");
+  if (ms) DEMO.timers.push(setTimeout(function () { cap.classList.remove("show"); }, dt(ms)));
+}
+function demoStep(atMs, fn) { DEMO.timers.push(setTimeout(fn, dt(atMs))); }
+
+function startDemo(home, away) {
+  var ov = document.getElementById("demoStart");
+  if (ov) ov.remove();
+  go(0);
+  // 拍1 钩子（0-3s）
+  demoCaption("五星巴西，只有 46% 胜率？", 3200);
+  // 拍2 出预测（3s）
+  demoStep(2600, function () {
+    predict();
+  });
+  demoStep(3400, function () {
+    demoCaption("胜平负，差距没那么大", 3000);
+    scrollToEl("resultArea");
+  });
+  // 拍3 大比分（9s）
+  demoStep(8800, function () {
+    demoCaption("最可能比分：1 比 1", 3000);
+    scrollToEl("bigScore", -120);
+  });
+  // 拍4 热力图（15s）
+  demoStep(14500, function () {
+    demoCaption("比分概率热力图 · Elo＋双泊松", 4000);
+    scrollToEl("heatTable", -120);
+  });
+  // 拍5 六维（22s）
+  demoStep(21500, function () {
+    demoCaption("六维对比 · 上届殿军不虚", 4000);
+    scrollToEl("radarCv", -120);
+  });
+  // 拍6 分享卡 CTA（28s）
+  demoStep(27500, function () {
+    makeCard();
+  });
+  demoStep(28800, function () {
+    demoCaption("完整预测看主页 · @碳化硅SiC", 5000);
+    scrollToEl("cardBox", -40);
+  });
+}
+function scrollToEl(id, offset) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  var y = el.getBoundingClientRect().top + window.pageYOffset + (offset || 0);
+  window.scrollTo({ top: y, behavior: "smooth" });
 }
 
 function onPick() {
