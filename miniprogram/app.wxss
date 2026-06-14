@@ -18,6 +18,9 @@ page {
 .tagline { color: #c49b8b; font-size: 24rpx; margin-top: 8rpx; font-style: italic; letter-spacing: 1rpx; }
 .live-chip { display: inline-block; margin-top: 14rpx; font-size: 22rpx; font-weight: 800; color: #ffd34d;
   border: 1rpx solid rgba(255,211,77,.5); border-radius: 30rpx; padding: 4rpx 20rpx; letter-spacing: 2rpx; }
+.dl-chip { display: inline-block; margin-top: 12rpx; font-size: 20rpx; font-weight: 800; color: #8fcaff;
+  background: linear-gradient(135deg, rgba(255,45,46,.16), rgba(61,165,255,.16));
+  border: 1rpx solid rgba(61,165,255,.5); border-radius: 30rpx; padding: 4rpx 18rpx; }
 
 .card { background: #221012; border: 1rpx solid #4a2520; border-radius: 24rpx; padding: 28rpx; margin: 22rpx 0;
   box-shadow: 0 6rpx 30rpx rgba(0,0,0,.35); }

@@ -1,8 +1,9 @@
 <view class="wrap">
   <view class="head">
     <view class="logo">🐙 <text class="logo-grad">硅基看球</text></view>
-    <view class="tagline">碳基看球，硅基算球 · Elo＋双泊松统计模型</view>
+    <view class="tagline">碳基看球，硅基算球 · 🧠 深度学习预测引擎</view>
     <view class="live-chip">⚽ 2026 世界杯 · 开战中 LIVE</view>
+    <view class="dl-chip">🧠 神经网络模型 · 约5万场比赛训练 · 判别式预测仅出概率</view>
   </view>
 
   <!-- 对阵选择 -->
@@ -35,7 +36,7 @@
   <block wx:if="{{result}}">
     <!-- 统计预测 -->
     <view class="card">
-      <view class="card-h">📊 统计模型预测 <text class="tag">Elo+双泊松+DC</text></view>
+      <view class="card-h">📊 预测结果 <text class="tag" style="border-color:#ff3d2e;color:#ff8a5e">🧠 深度学习模型</text></view>
       <view class="prob-bar">
         <view class="seg w" style="width:{{result.wWidth}}%">{{result.pW}}</view>
         <view class="seg d" style="width:{{result.dWidth}}%">{{result.pD}}</view>

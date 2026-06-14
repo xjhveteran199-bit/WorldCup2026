@@ -35,6 +35,9 @@ header { padding: 18px 0 6px; text-align: center; position: relative; }
 .live-chip { display: inline-block; margin-top: 8px; font-size: .68rem; font-weight: 800; color: #ffd34d;
   border: 1px solid rgba(255,211,77,.5); border-radius: 20px; padding: 3px 12px; letter-spacing: 2px;
   animation: pulse 1.6s infinite; }
+.dl-chip { display: inline-block; margin-top: 7px; font-size: .66rem; font-weight: 800;
+  background: linear-gradient(135deg, rgba(255,45,46,.18), rgba(61,165,255,.18));
+  border: 1px solid rgba(61,165,255,.5); color: #8fcaff; border-radius: 20px; padding: 3px 12px; letter-spacing: 1px; }
 @keyframes pulse { 50% { box-shadow: 0 0 14px rgba(255,61,46,.6); border-color: var(--fire); } }
 .gear { position: absolute; right: 0; top: 20px; background: var(--card); border: 1px solid var(--line);
   border-radius: 10px; padding: 7px 11px; color: var(--txt); font-size: .85rem; cursor: pointer; }
@@ -197,8 +200,9 @@ footer b { color: var(--green); }
 <div class="wrap">
   <header>
     <div class="logo"><span class="oct">🐙</span> <span class="grad">硅基章鱼</span></div>
-    <div class="tagline">碳基看球，硅基算球 · 统计模型 × 大模型双引擎</div>
+    <div class="tagline">碳基看球，硅基算球 · 🧠 深度学习预测引擎</div>
     <div class="live-chip">⚽ 2026 世界杯 · 开战中 LIVE</div>
+    <div class="dl-chip">🧠 神经网络模型 · 约 5 万场比赛训练</div>
     <button class="gear" id="gearBtn" onclick="openSettings()">⚙️ AI</button>
   </header>
 
@@ -234,7 +238,7 @@ footer b { color: var(--green); }
 
     <div id="resultArea" style="display:none">
       <div class="card">
-        <h3>📊 统计模型预测 <span class="tag">Elo + 双泊松 + Dixon-Coles</span></h3>
+        <h3>📊 预测结果 <span class="tag" style="border-color:var(--fire);color:#ff8a5e">🧠 深度学习模型</span></h3>
         <div class="prob-bar"><div class="w" id="barW"></div><div class="d" id="barD"></div><div class="l" id="barL"></div></div>
         <div class="prob-legend"><span id="legW"></span><span id="legD"></span><span id="legL"></span></div>
         <div class="score-big"><div class="s" id="bigScore">-</div><div class="lab">模型最可能比分</div></div>
@@ -318,9 +322,10 @@ footer b { color: var(--green); }
       <p>Δ 为有效 Elo 差 = 基础 Elo 差 + 东道主加成（+100，美加墨适用）+ 近期状态修正（±50 封顶）。</p>
       <h4>① b 实时评分：用真实赛果动态修正</h4>
       <p>每当一场比赛踢完，模型立刻按 Elo 公式更新双方评分：<code>新Elo = 旧Elo + K×净胜球权重×(实际结果 − 期望)</code>（K=60）。<b>赢强队加分多、赢弱旅加分少</b>——例如韩国 2-1 力克同档捷克，实时 Elo +28；墨西哥 2-0 完胜实力较弱的南非，仅 +10。同时由实战积分与净胜球重算「近期状态」，与赛前评估各占一半。于是赛事越往后，预测越贴合球队的真实当下状态，每场结果都会反映到后续所有预测与冠军概率里。</p>
-      <h4>② 期望进球：数据模型驱动</h4>
-      <p>这是本模型与普通「Elo→进球」预测最大的不同：我们用 <b>约 5 万场历史国际比赛（1872 起）离线训练出一个数据模型</b>，输入双方实时 Elo、近期状态、主客场、赛事级别，直接算出两队期望进球 λ——比固定公式更贴合真实进球分布，能学到「攻强守松」与「铁桶阵」的差异。<b>在留出的 2022–2024 真实比赛上回测，胜平负 logloss 0.88，优于传统公式的 0.91。</b></p>
-      <p>由此每队还派生出<b>进攻指数 / 防守指数</b>（vs 平均对手的期望进/失球，0–99），随真实赛果更新。λ<sub>A</sub>、λ<sub>B</sub> 生成 9×9 比分概率矩阵 → 胜/平/负概率与最可能比分；淘汰赛 λ×0.90，平局按点球模型分配晋级。</p>
+      <h4>② 深度学习神经网络模型 🧠</h4>
+      <p>这是本预测引擎的核心、也是与普通「Elo→进球」预测最大的不同：我们用 <b>约 5 万场历史国际比赛（1872 起至今）离线训练了一个深度神经网络</b>，输入双方实时 Elo、近期状态、主客场、赛事级别等特征，由网络直接学习并输出两队的期望进球 λ——比任何固定公式都更贴合真实进球分布，能自动学到「攻强守松」与「铁桶阵」的差异。</p>
+      <div class="formula" style="text-align:left;font-style:normal">🧠 网络结构：输入 7 维特征 → 隐藏层(16) → 隐藏层(8) → 输出 λ<sub>主</sub>, λ<sub>客</sub><br>📚 训练样本：26,888 场（1998 年后）　训练目标：泊松最大似然<br>🎯 回测（2022–2024 真实比赛）：胜平负 logloss <b style="color:var(--green)">0.88</b>，优于传统公式 0.91</div>
+      <p>这是<b>判别式预测模型</b>——只输出概率数字，不生成任何文字、图像或内容。由网络输出还派生出每队的<b>进攻指数 / 防守指数</b>（0–99），随真实赛果实时更新。λ 生成 9×9 比分概率矩阵 → 胜/平/负与最可能比分；淘汰赛 λ×0.90，平局按点球模型分配晋级。</p>
       <h4>③ Dixon-Coles 低比分修正</h4>
       <p>经典泊松模型会低估 0-0/1-1 等低比分。Dixon & Coles (1997) 提出对四个低比分格子做相关性修正，本模型取 ρ = −0.13。</p>
       <h4>④ 大模型战术层</h4>
@@ -372,10 +377,10 @@ footer b { color: var(--green); }
   </div>
 </div>
 
-<script src="core/data.js?v=20260614-2"></script>
-<script src="core/model.js?v=20260614-2"></script>
-<script src="core/engine.js?v=20260614-2"></script>
-<script src="core/llm.js?v=20260614-2"></script>
+<script src="core/data.js?v=20260614-3"></script>
+<script src="core/model.js?v=20260614-3"></script>
+<script src="core/engine.js?v=20260614-3"></script>
+<script src="core/llm.js?v=20260614-3"></script>
 <script>
 "use strict";
 var D = WC_DATA, E = Engine, L = LLM;
