@@ -1,6 +1,9 @@
-# 硅基看球 · 微信小程序版（Phase B）
+# 硅基看球 · 微信小程序版（Phase B · 纯统计版）
 
-2026 美加墨世界杯 AI 预测小程序，原生框架，与网页版共享 `core/` 统计引擎。
+2026 美加墨世界杯**数据预测**小程序，原生框架，与网页版共享 `core/` 统计引擎。
+
+> ⚠️ **重要（v1.0.1 被驳回的教训）**：个人主体小程序**不得含生成式 AI/深度合成功能**（AI问答/换脸/绘画等）。v1.0.1 因内置「AI 大模型战术分析」被判「深度合成技术，个人主体未开放服务类目」驳回。
+> 自 v1.0.2 起，小程序**已彻底移除 AI 功能**（设置页、llm.js、战术分析全部删除），只保留纯数学统计：Elo+双泊松预测、实时评分、冠军模拟、分享卡片。网页版不受此限制，AI 功能照常保留。**切勿再往小程序加任何 LLM/AI 生成功能。**
 
 ## 一、本地运行
 
@@ -11,18 +14,13 @@
 ## 二、提审前必做的后台配置（微信公众平台 mp.weixin.qq.com）
 
 ### 1. request 合法域名（开发管理 → 开发设置 → 服务器域名）
-把以下域名加入 **request 合法域名**白名单：
+纯统计版只需**一个**域名（用于拉取每天自动更新的比分数据）：
 
 ```
-https://worldcup2026-blond.vercel.app   ← 远程数据端点（每天自动更新的比分）
-https://api.deepseek.com
-https://api.moonshot.cn
-https://open.bigmodel.cn
-https://dashscope.aliyuncs.com
-https://api.minimaxi.com
+https://worldcup2026-blond.vercel.app
 ```
 
-> Gemini 域名无法备案，故小程序版不含 Gemini（网页版才有）。
+> AI 已移除，原来的 5 个 LLM 域名不再需要。
 
 **数据自动更新机制（无需重新提审）**：小程序启动时从 `worldcup2026-blond.vercel.app/data.json` 拉取最新比分，缓存到本地，下次冷启动生效（stale-while-revalidate）；拉取失败则用打包的 `utils/data.js` 兜底。网页版的每日定时任务会同步更新这个 data.json，所以**小程序发布一次后，后续比分更新无需再提审**。若 Vercel 在国内访问不稳定，用户会看到打包数据（最近一次发版时的数据），功能不受影响。
 

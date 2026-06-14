@@ -19,7 +19,7 @@
     <view class="share-box" wx:if="{{sharePath}}">
       <image src="{{sharePath}}" mode="widthFix" class="share-img"></image>
       <button class="btn btn-ghost" bindtap="saveCard">⬇️ 保存到相册</button>
-      <view class="hint" style="text-align:center;margin-top:10rpx">「AI 模拟一万届世界杯」是天然爆款选题 📕</view>
+      <view class="hint" style="text-align:center;margin-top:10rpx">「模型模拟一万届世界杯」是天然爆款选题 📕</view>
     </view>
   </view>
 

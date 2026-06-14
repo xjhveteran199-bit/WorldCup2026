@@ -1,4 +1,4 @@
-// 硅基看球 · 2026美加墨世界杯AI预测
+// 硅基看球 · 2026美加墨世界杯数据预测
 const wc = require('./utils/wc.js');
 
 // 远程数据端点（网页版每天自动更新 → 小程序无需重新提审即可获取新比分）
@@ -6,15 +6,10 @@ const DATA_URL = 'https://worldcup2026-blond.vercel.app/data.json';
 
 App({
   globalData: {
-    llm: null,       // AI 配置（BYOK：用户自带 API Key）
     dataUpdated: ''  // 当前数据更新日期
   },
 
   onLaunch() {
-    try {
-      const cfg = wx.getStorageSync('sjzy_llm');
-      if (cfg) this.globalData.llm = cfg;
-    } catch (e) {}
     this.globalData.dataUpdated = wc.current().updated;
     this.fetchRemoteData();
   },

@@ -1,9 +1,8 @@
 <view class="wrap">
   <view class="head">
     <view class="logo">🐙 <text class="logo-grad">硅基看球</text></view>
-    <view class="tagline">碳基看球，硅基算球 · 统计 × 大模型双引擎</view>
+    <view class="tagline">碳基看球，硅基算球 · Elo＋双泊松统计模型</view>
     <view class="live-chip">⚽ 2026 世界杯 · 开战中 LIVE</view>
-    <view class="gear" bindtap="goSettings">⚙️ AI</view>
   </view>
 
   <!-- 对阵选择 -->
@@ -92,29 +91,6 @@
       <view class="factor" wx:for="{{result.factors}}" wx:key="k">
         <text class="fk">{{item.k}}</text><text class="fv {{item.cls}}">{{item.v}}</text>
       </view>
-    </view>
-
-    <!-- AI 分析 -->
-    <view class="card">
-      <view class="card-h">🤖 AI 战术分析 <text class="tag">{{aiTag}}</text></view>
-      <block wx:if="{{aiState==='idle'}}">
-        <view class="hint" style="margin-bottom:16rpx">填入国产大模型 Key（DeepSeek/Kimi/智谱/通义/MiniMax），解锁阵型相克、教练斗法、关键对位分析。</view>
-        <textarea class="intel" placeholder="（可选）粘贴最新情报：首发、伤病、天气…" value="{{intel}}" bindinput="onIntel" maxlength="300"></textarea>
-        <button class="btn btn-ghost" style="margin-top:16rpx" bindtap="runAI">启动 AI 分析</button>
-      </block>
-      <view wx:if="{{aiState==='running'}}" class="ai-loading">🐙 章鱼正在研究战术板…</view>
-      <view wx:if="{{aiState==='error'}}" class="ai-err">❌ {{aiErr}}<view class="hint">可在「我的→AI设置」换个渠道重试</view></view>
-      <block wx:if="{{aiState==='done'}}">
-        <view class="ai-sec" wx:for="{{aiSections}}" wx:key="h">
-          <view class="ai-h" wx:if="{{item.h}}">{{item.h}}</view>
-          <view class="ai-body">{{item.body}}</view>
-        </view>
-        <view class="ai-quote" wx:if="{{aiQuote}}">
-          🐙 <text class="q">{{aiQuote}}</text>
-          <view class="q-meta">AI 预测 {{aiScore}} · 信心 {{aiConfidence}}%</view>
-        </view>
-        <view class="fuse" wx:if="{{fused}}">双引擎融合：{{aZh}}胜 {{fused.pW}} · 平 {{fused.pD}} · {{bZh}}胜 {{fused.pL}}（修正 {{fused.adj}}：{{aiReason}}）</view>
-      </block>
     </view>
 
     <!-- 分享卡片 -->

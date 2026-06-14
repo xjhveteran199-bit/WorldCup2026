@@ -69,9 +69,9 @@ Page({
 
   onShareAppMessage() {
     const top = this.data.ranks[0];
-    return { title: top ? `🐙 AI 模拟一万届世界杯：${top.zh} 夺冠概率 ${top.pct}%` : '🐙 AI 模拟一万届世界杯', path: '/pages/sim/sim' };
+    return { title: top ? `🐙 模型模拟一万届世界杯：${top.zh} 夺冠概率 ${top.pct}%` : '🐙 模型模拟一万届世界杯', path: '/pages/sim/sim' };
   },
-  onShareTimeline() { return { title: '🐙 AI 模拟一万届世界杯，看看谁夺冠' }; }
+  onShareTimeline() { return { title: '🐙 模型模拟一万届世界杯，看看谁夺冠' }; }
 });
 
 function drawSimCard(ctx, W, H, rows) {
@@ -85,7 +85,7 @@ function drawSimCard(ctx, W, H, rows) {
   ctx.fillStyle = '#fff'; ctx.font = 'italic 900 58px sans-serif';
   ctx.fillText('🐙 硅基看球', W / 2, 110);
   ctx.fillStyle = '#d8a48f'; ctx.font = 'italic 32px sans-serif';
-  ctx.fillText('AI 模拟了 10000 届世界杯', W / 2, 168);
+  ctx.fillText('数据模型模拟了 10000 届世界杯', W / 2, 168);
   ctx.fillStyle = '#ffd34d'; ctx.font = 'italic 900 64px sans-serif';
   ctx.fillText('👑 夺冠概率排行榜', W / 2, 280);
 

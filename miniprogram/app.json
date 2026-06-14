@@ -3,8 +3,7 @@
     "pages/predict/predict",
     "pages/fixtures/fixtures",
     "pages/sim/sim",
-    "pages/doc/doc",
-    "pages/settings/settings"
+    "pages/doc/doc"
   ],
   "window": {
     "navigationBarBackgroundColor": "#120608",

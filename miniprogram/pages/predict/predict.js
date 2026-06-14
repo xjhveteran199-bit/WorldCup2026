@@ -1,7 +1,5 @@
 const WC = require('../../utils/wc.js').current();
 const E = require('../../utils/engine.js');
-const L = require('../../utils/llm.js');
-const app = getApp();
 
 const WATERMARK = '小红书 @碳化硅SiC';
 
@@ -31,13 +29,6 @@ Page({
     aZh: '', bZh: '', aFlag: '', bFlag: '', aMeta: '', bMeta: '',
     knockout: false,
     result: null,        // 渲染就绪的结果对象
-    intel: '',
-    aiState: 'idle',     // idle | running | done | error
-    aiText: '',          // markdown 转的纯文本分段
-    aiSections: [],      // [{h, body}]
-    aiQuote: '', aiScore: '', aiConfidence: 0, aiReason: '',
-    fused: null,
-    aiTag: '未连接',
     sharePath: '',
     dataDate: WC.updated,
     resultsCount: Object.keys(WC.results || {}).length
@@ -56,21 +47,7 @@ Page({
       if (ia >= 0 && ib >= 0) this.setData({ idxA: ia, idxB: ib, knockout: false });
     }
     this.refreshMeta();
-    this.refreshAiTag();
     if (opts.h && opts.a) this.predict();
-  },
-
-  onShow() { this.refreshAiTag(); },
-
-  refreshAiTag() {
-    const cfg = app.globalData.llm || wx.getStorageSync('sjzy_llm');
-    if (cfg && cfg.key) {
-      app.globalData.llm = cfg;
-      const p = L.getProvider(cfg.providerId);
-      this.setData({ aiTag: p ? p.name : '已连接' });
-    } else {
-      this.setData({ aiTag: '未连接' });
-    }
   },
 
   refreshMeta() {
@@ -88,7 +65,6 @@ Page({
   onPickA(e) { this.setData({ idxA: +e.detail.value }, () => this.refreshMeta()); },
   onPickB(e) { this.setData({ idxB: +e.detail.value }, () => this.refreshMeta()); },
   setMode(e) { this.setData({ knockout: e.currentTarget.dataset.ko === '1' }); },
-  onIntel(e) { this.setData({ intel: e.detail.value }); },
 
   predict() {
     const ca = this.data.teamList[this.data.idxA].code;
@@ -101,7 +77,7 @@ Page({
       hostA: WC.hosts.indexOf(ca) >= 0, hostB: WC.hosts.indexOf(cb) >= 0
     });
     pred.liveA = live[ca]; pred.liveB = live[cb];
-    this._pred = pred; this._ca = ca; this._cb = cb; this._liveA = a; this._liveB = b;
+    this._pred = pred; this._ca = ca; this._cb = cb;
 
     // 热力图 0-5（带颜色）
     let maxP = 0;
@@ -153,45 +129,8 @@ Page({
           ? `晋级概率：${a.zh} ${pct(pred.pAdvanceA)} / ${b.zh} ${pct(1 - pred.pAdvanceA)}`
           : ''
       },
-      // 重置 AI
-      aiState: 'idle', aiSections: [], aiQuote: '', fused: null, sharePath: ''
+      sharePath: ''
     });
-  },
-
-  // ====== AI 分析 ======
-  runAI() {
-    const cfg = app.globalData.llm || wx.getStorageSync('sjzy_llm');
-    if (!cfg || !cfg.key) {
-      wx.navigateTo({ url: '/pages/settings/settings' });
-      return;
-    }
-    if (!this._pred) { wx.showToast({ title: '请先生成预测', icon: 'none' }); return; }
-    const a = this._liveA || WC.teams[this._ca], b = this._liveB || WC.teams[this._cb];
-    const prompt = L.buildPrompt(a, b, this._pred, this.data.intel, { knockout: this.data.knockout });
-    this.setData({ aiState: 'running' });
-    L.chat({ providerId: cfg.providerId, key: cfg.key, model: cfg.model, prompt })
-      .then(full => {
-        const adj = L.parseAdjustment(full);
-        const sections = parseSections(full);
-        let fused = null;
-        if (adj) {
-          const f = L.applyAdjustment(this._pred, adj);
-          fused = {
-            pW: pct(f.pWin), pD: pct(f.pDraw), pL: pct(f.pLoss),
-            adj: fmtPt(adj.adjustWin) + ' / ' + fmtPt(adj.adjustDraw) + ' / ' + fmtPt(adj.adjustLoss)
-          };
-          this._fused = f; this._adj = adj;
-        }
-        this.setData({
-          aiState: 'done', aiSections: sections,
-          aiQuote: adj ? adj.quote : '', aiScore: adj ? adj.predictedScore : '',
-          aiConfidence: adj ? adj.confidence : 0, aiReason: adj ? adj.reason : '',
-          fused
-        });
-      })
-      .catch(err => {
-        this.setData({ aiState: 'error', aiErr: String(err.message || err).slice(0, 120) });
-      });
   },
 
   // ====== 分享卡片（Canvas 2D 离屏）======
@@ -199,11 +138,11 @@ Page({
     if (!this._pred) return;
     wx.showLoading({ title: '生成中…' });
     const a = WC.teams[this._ca], b = WC.teams[this._cb];
-    const pred = this._pred, fused = this._fused, adj = this._adj;
+    const pred = this._pred;
     const W = 1080, H = 1440;
     const canvas = wx.createOffscreenCanvas({ type: '2d', width: W, height: H });
     const ctx = canvas.getContext('2d');
-    drawCard(ctx, W, H, a, b, pred, fused, adj);
+    drawCard(ctx, W, H, a, b, pred);
     wx.canvasToTempFilePath({
       canvas,
       success: res => {
@@ -230,49 +169,28 @@ Page({
     });
   },
 
-  goSettings() { wx.navigateTo({ url: '/pages/settings/settings' }); },
-
   // 转发引流
   onShareAppMessage() {
     const r = this.data.result;
     const title = r
-      ? `🐙 AI 预测：${this.data.aZh} vs ${this.data.bZh} ${r.bigScore}`
-      : '🐙 硅基看球 · 2026世界杯AI预测';
+      ? `🐙 ${this.data.aZh} vs ${this.data.bZh} 数据预测 ${r.bigScore}`
+      : '🐙 硅基看球 · 2026世界杯数据预测';
     return { title, path: '/pages/predict/predict' };
   },
   onShareTimeline() {
-    return { title: '🐙 硅基看球 · AI 算遍2026世界杯每场比赛' };
+    return { title: '🐙 硅基看球 · 数据模型算遍2026世界杯每场比赛' };
   }
 });
 
 function fmt(v) { return (v > 0 ? '+' : '') + v; }
-function fmtPt(v) { return (v >= 0 ? '+' : '') + v.toFixed(1) + 'pt'; }
 function liveMeta(t, L) {
   const elo = (L && L.played > 0) ? 'Elo ' + L.elo + '(' + fmt(L.eloDelta) + ')' : 'Elo ' + t.elo;
   const rec = (L && L.played > 0) ? ' · ' + L.w + '胜' + L.d + '平' + L.l + '负' : '';
   return elo + ' · FIFA#' + t.fifa + ' · ' + t.formation + rec;
 }
 
-// 简易 markdown 分节
-function parseSections(text) {
-  const clean = text.replace(/```json[\s\S]*?(```|$)/g, '').trim();
-  const parts = clean.split(/\n(?=##\s)/);
-  const out = [];
-  parts.forEach(p => {
-    const m = p.match(/^##\s*(.+)/);
-    if (m) {
-      const h = m[1].trim();
-      const body = p.replace(/^##\s*.+\n?/, '').replace(/\*\*(.+?)\*\*/g, '$1').trim();
-      out.push({ h, body });
-    } else if (p.trim()) {
-      out.push({ h: '', body: p.replace(/\*\*(.+?)\*\*/g, '$1').trim() });
-    }
-  });
-  return out;
-}
-
-// Canvas 2D 绘制分享卡片（与网页版同款火焰风）
-function drawCard(ctx, W, H, a, b, pred, fused, adj) {
+// Canvas 2D 绘制分享卡片（火焰风）
+function drawCard(ctx, W, H, a, b, pred) {
   const g = ctx.createLinearGradient(0, 0, W, H);
   g.addColorStop(0, '#1c0608'); g.addColorStop(.55, '#2a0d0a'); g.addColorStop(1, '#341103');
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
@@ -286,7 +204,7 @@ function drawCard(ctx, W, H, a, b, pred, fused, adj) {
   ctx.fillStyle = '#fff'; ctx.font = 'italic 900 58px sans-serif';
   ctx.fillText('🐙 硅基看球', W / 2, 110);
   ctx.fillStyle = '#d8a48f'; ctx.font = 'italic 32px sans-serif';
-  ctx.fillText('2026 美加墨世界杯 · AI 预测卡', W / 2, 168);
+  ctx.fillText('2026 美加墨世界杯 · 数据预测卡', W / 2, 168);
 
   ctx.font = '120px sans-serif';
   ctx.fillText(a.flag, W * .27, 400); ctx.fillText(b.flag, W * .73, 400);
@@ -301,12 +219,11 @@ function drawCard(ctx, W, H, a, b, pred, fused, adj) {
   const grad = ctx.createLinearGradient(W * .3, 0, W * .7, 0);
   grad.addColorStop(0, '#ff2d2e'); grad.addColorStop(1, '#ffae00');
   ctx.fillStyle = grad; ctx.font = 'italic 900 175px sans-serif';
-  const scoreStr = adj && adj.predictedScore ? adj.predictedScore.replace('-', ' : ') : top.a + ' : ' + top.b;
-  ctx.fillText(scoreStr, W / 2, 740);
+  ctx.fillText(top.a + ' : ' + top.b, W / 2, 740);
   ctx.fillStyle = '#c49b8b'; ctx.font = '30px sans-serif';
-  ctx.fillText(adj ? 'AI 融合预测比分' : '模型最可能比分（' + pct(top.p) + '）', W / 2, 800);
+  ctx.fillText('模型最可能比分（' + pct(top.p) + '）', W / 2, 800);
 
-  const pw = fused ? fused.pWin : pred.pWin, pd = fused ? fused.pDraw : pred.pDraw, pl = fused ? fused.pLoss : pred.pLoss;
+  const pw = pred.pWin, pd = pred.pDraw, pl = pred.pLoss;
   const bx = 90, bw = W - 180, by = 880, bh = 64;
   const wg = ctx.createLinearGradient(bx, 0, bx + bw * pw, 0);
   wg.addColorStop(0, '#ff2d2e'); wg.addColorStop(1, '#ff7a1f');
@@ -322,25 +239,10 @@ function drawCard(ctx, W, H, a, b, pred, fused, adj) {
   ctx.textAlign = 'right'; ctx.fillText(b.zh + ' 胜', bx + bw, by + 110);
   ctx.textAlign = 'center'; ctx.fillText('平', bx + bw * (pw + pd / 2), by + 110);
 
-  if (adj && adj.quote) {
-    ctx.fillStyle = 'rgba(255,211,77,.12)'; roundRect(ctx, 80, 1060, W - 160, 120, 24); ctx.fill();
-    ctx.strokeStyle = '#ffd34d'; ctx.lineWidth = 2; roundRect(ctx, 80, 1060, W - 160, 120, 24); ctx.stroke();
-    ctx.fillStyle = '#fdeee4'; ctx.font = 'italic 700 36px sans-serif';
-    ctx.fillText('🐙 “' + adj.quote.slice(0, 22) + '”', W / 2, 1135);
-  } else {
-    ctx.fillStyle = '#8a625a'; ctx.font = '28px sans-serif';
-    ctx.fillText('填入 AI Key 可解锁战术分析与章鱼金句', W / 2, 1120);
-  }
-
   ctx.fillStyle = '#c49b8b'; ctx.font = '28px sans-serif';
-  ctx.fillText('Elo × 双泊松 × Dixon-Coles × AI 大模型', W / 2, H - 130);
+  ctx.fillText('Elo × 双泊松 × Dixon-Coles 统计模型', W / 2, H - 130);
   ctx.fillStyle = '#ffae00'; ctx.font = 'italic 700 34px sans-serif';
   ctx.fillText(WATERMARK, W / 2, H - 78);
   ctx.fillStyle = '#8a625a'; ctx.font = '22px sans-serif';
   ctx.fillText('仅供娱乐 · 理性看球', W / 2, H - 38);
-}
-function roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath(); ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
 }
