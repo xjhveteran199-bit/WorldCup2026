@@ -25,7 +25,7 @@ if (!fs.existsSync(KEY)) {
     type: 'miniProgram',
     projectPath: path.join(__dirname, 'miniprogram'),
     privateKeyPath: KEY,
-    ignores: ['node_modules/**/*']
+    ignores: ['node_modules/**/*', 'README.md', '**/*.md']
   });
   console.log(`⬆️  上传版本 ${VERSION} …`);
   const result = await ci.upload({

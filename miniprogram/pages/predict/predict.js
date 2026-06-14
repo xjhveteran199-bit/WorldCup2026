@@ -109,6 +109,10 @@ Page({
       { k: hasResult ? '实时Elo(含赛果)' : '基础 Elo', v: eloVal, cls: pred.eloA.base - pred.eloB.base > 0 ? 'pos' : 'neg' }
     ];
     if (hasResult) factors.push({ k: '已结合赛果', v: a.zh + ' ' + la.played + '场 / ' + b.zh + ' ' + lb.played + '场', cls: 'neu' });
+    if (a.attackIdx != null && b.attackIdx != null) {
+      factors.push({ k: '进攻指数 ⚔️', v: a.attackIdx + ' vs ' + b.attackIdx, cls: a.attackIdx - b.attackIdx > 0 ? 'pos' : 'neg' });
+      factors.push({ k: '防守指数 🛡️', v: a.defenseIdx + ' vs ' + b.defenseIdx, cls: a.defenseIdx - b.defenseIdx > 0 ? 'pos' : 'neg' });
+    }
     factors.push(
       { k: '状态修正', v: fmt(pred.eloA.formAdj) + ' / ' + fmt(pred.eloB.formAdj), cls: 'neu' },
       { k: '东道主加成', v: fmt(pred.eloA.hostAdj) + ' / ' + fmt(pred.eloB.hostAdj), cls: pred.eloA.hostAdj ? 'pos' : 'neu' },

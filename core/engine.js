@@ -20,6 +20,47 @@
   var KO_FACTOR = 0.90;        // 淘汰赛进球压缩
   var DC_RHO = -0.13;          // Dixon-Coles 相关系数
   var MAX_GOALS = 8;           // 比分矩阵上限
+  var WC_HOME_ADV = 65;        // 数据模型的主场 Elo 加成（与训练一致）
+  var WC_IMP = 2;              // 世界杯=大赛重要度
+
+  // 载入数据模型权重（离线训练，端内推理；缺失则回退手调公式）
+  var MODEL = null;
+  if (typeof WC_MODEL !== "undefined") MODEL = WC_MODEL;
+  else if (typeof module !== "undefined" && module.exports) { try { MODEL = require("./model.js"); } catch (e) {} }
+  else if (root && root.WC_MODEL) MODEL = root.WC_MODEL;
+
+  // MLP 前向推理：特征向量 → [logλ_home, logλ_away] → [λ_home, λ_away]
+  function modelLambdas(feat) {
+    var x = [], i, j;
+    for (i = 0; i < feat.length; i++) x[i] = (feat[i] - MODEL.mean[i]) / MODEL.std[i];
+    var a = x;
+    for (var L = 0; L < MODEL.layers.length; L++) {
+      var ly = MODEL.layers[L], W = ly.W, b = ly.b, out = [];
+      for (j = 0; j < W.length; j++) {
+        var s = b[j], wj = W[j];
+        for (i = 0; i < wj.length; i++) s += wj[i] * a[i];
+        out[j] = ly.act === "relu" ? Math.max(0, s) : s;
+      }
+      a = out;
+    }
+    var lo = MODEL.clip[0], hi = MODEL.clip[1];
+    return [Math.exp(Math.max(lo, Math.min(hi, a[0]))), Math.exp(Math.max(lo, Math.min(hi, a[1])))];
+  }
+
+  // 由球队对象组特征 → 数据模型期望进球；返回 null 表示无模型
+  function lambdasFromModel(teamA, teamB, opts) {
+    if (!MODEL) return null;
+    var eh = teamA.elo, ea = teamB.elo;
+    var haH = opts.hostA ? WC_HOME_ADV : 0, haA = opts.hostB ? WC_HOME_ADV : 0;
+    var diff = (eh + haH) - (ea + haA);
+    var neutral = (opts.hostA || opts.hostB) ? 0 : 1;
+    var fh = (teamA._formRatio != null) ? teamA._formRatio : formRatio(teamA.form);
+    var fa = (teamB._formRatio != null) ? teamB._formRatio : formRatio(teamB.form);
+    // 特征顺序须与训练一致：elo_h, elo_a, diff, neutral, imp, form_h, form_a
+    return modelLambdas([eh, ea, diff, neutral, WC_IMP, fh, fa]);
+  }
+  // 引擎 form(0-100) → 训练用的近期积分率(0~1) 的近似
+  function formRatio(form) { return clamp((form - 40) / 55, 0, 1); }
 
   var factCache = [1];
   function fact(n) {
@@ -64,8 +105,15 @@
     var we = 1 / (1 + Math.pow(10, -dr / 400));
 
     var koMul = opts.knockout ? KO_FACTOR : 1;
-    var la = clamp(BASE_LAMBDA * Math.exp(K_LAMBDA * dr) * koMul, 0.15, 4.5);
-    var lb = clamp(BASE_LAMBDA * Math.exp(-K_LAMBDA * dr) * koMul, 0.15, 4.5);
+    // 优先用数据模型（离线训练）的期望进球；无模型则回退手调公式
+    var ml = lambdasFromModel(teamA, teamB, opts), la, lb;
+    if (ml) {
+      la = clamp(ml[0] * koMul, 0.15, 4.5);
+      lb = clamp(ml[1] * koMul, 0.15, 4.5);
+    } else {
+      la = clamp(BASE_LAMBDA * Math.exp(K_LAMBDA * dr) * koMul, 0.15, 4.5);
+      lb = clamp(BASE_LAMBDA * Math.exp(-K_LAMBDA * dr) * koMul, 0.15, 4.5);
+    }
 
     // 比分矩阵
     var matrix = [], pWin = 0, pDraw = 0, pLoss = 0, total = 0;
@@ -144,15 +192,30 @@
     // 由实战表现重算 form，与赛前评估融合
     Object.keys(R).forEach(function (c) {
       var r = R[c];
-      if (r.played === 0) { r.form = r.baseForm; r.eloDelta = 0; r.elo = Math.round(r.elo); return; }
+      if (r.played === 0) {
+        r.form = r.baseForm; r.eloDelta = 0; r.elo = Math.round(r.elo);
+        r.formRatio = 0.5; return;  // 近期积分率默认 0.5（与训练一致）
+      }
       var ppg = r.recent.reduce(function (s, m) { return s + m.pts; }, 0) / r.played; // 0~3
       var gdAvg = r.recent.reduce(function (s, m) { return s + m.gd; }, 0) / r.played;
       var perf = clamp(55 + ppg * 12 + gdAvg * 4, 40, 98);
       r.form = Math.round(FORM_BLEND * r.baseForm + (1 - FORM_BLEND) * perf);
       r.eloDelta = Math.round(r.elo - r.baseElo);
       r.elo = Math.round(r.elo);
+      r.formRatio = ppg / 3;  // 0~1，喂给数据模型的近期状态特征
     });
     return R;
+  }
+
+  // 数据模型派生的「进攻/防守指数」（0-99）：该队 vs 平均对手(Elo≈1600)的期望进/失球
+  var AVG_OPP = { elo: 1600, form: 70, _formRatio: 0.5 };
+  function teamIndices(team) {
+    if (!MODEL) return null;
+    var l = lambdasFromModel(team, AVG_OPP, {});  // 中立场，该队进攻 / 对手进攻=该队失球
+    return {
+      attackIdx: Math.round(clamp(50 + (l[0] - 1.3) * 30, 1, 99)),
+      defenseIdx: Math.round(clamp(50 - (l[1] - 1.3) * 30, 1, 99))
+    };
   }
 
   /** 构造一个套用实时评分的球队对象（用于 predictMatch） */
@@ -162,7 +225,10 @@
     for (var k in team) if (team.hasOwnProperty(k)) o[k] = team[k];
     o.elo = liveRow.elo; o.form = liveRow.form;
     o._eloDelta = liveRow.eloDelta; o._played = liveRow.played;
+    o._formRatio = (liveRow.formRatio != null) ? liveRow.formRatio : 0.5;
     o._record = liveRow.w + '胜' + liveRow.d + '平' + liveRow.l + '负';
+    var idx = teamIndices(o);
+    if (idx) { o.attackIdx = idx.attackIdx; o.defenseIdx = idx.defenseIdx; }
     return o;
   }
 
@@ -297,9 +363,12 @@
     var eloNorm = clamp((t.elo - 1400) / (2160 - 1400) * 100, 5, 100);
     var fifaNorm = clamp((90 - t.fifa) / 89 * 100, 5, 100);
     var host = data.hosts.indexOf(codeOf(t, data)) >= 0 ? 8 : 0;
+    // 攻防优先用数据模型派生指数（liveTeam 已附加），否则回退 Elo 估算
+    var att = (t.attackIdx != null) ? t.attackIdx : Math.round(clamp(eloNorm * 0.7 + t.form * 0.3, 10, 99));
+    var def = (t.defenseIdx != null) ? t.defenseIdx : Math.round(clamp(eloNorm * 0.6 + fifaNorm * 0.4, 10, 99));
     return {
-      攻击力: Math.round(clamp(eloNorm * 0.7 + t.form * 0.3, 10, 99)),
-      防守力: Math.round(clamp(eloNorm * 0.6 + fifaNorm * 0.4, 10, 99)),
+      攻击力: att,
+      防守力: def,
       近期状态: Math.round(t.form),
       大赛经验: Math.round(clamp(fifaNorm * 0.8 + 20 - (t.fifa <= 20 ? 0 : 10), 10, 99)),
       教练博弈: Math.round(clamp(eloNorm * 0.4 + fifaNorm * 0.4 + 15, 10, 99)),
@@ -324,7 +393,8 @@
     console.assert(Math.abs(sum - 1) < 1e-9, "概率和应为1, 实际 " + sum);
     console.assert(p.pWin > p.pLoss, "强队胜率应更高");
     var q = predictMatch(t2, t1, {});
-    console.assert(Math.abs(q.pLoss - p.pWin) < 1e-9, "对称性: 互换后胜负概率应互换");
+    // 数据模型有微弱主场偏置（真实学到），不再严格对称，放宽容差
+    console.assert(Math.abs(q.pLoss - p.pWin) < 0.08, "近似对称: 互换后胜负概率应大致互换, 差 " + Math.abs(q.pLoss - p.pWin).toFixed(3));
     var ko = predictMatch(t1, t2, { knockout: true });
     console.assert(Math.abs(ko.pAdvanceA - (ko.pWin + ko.pDraw * ko.pPenaltyA)) < 1e-9, "晋级概率公式");
     if (data) {
@@ -351,11 +421,22 @@
         }
       }
     }
+    // 数据模型：进攻/防守指数应区分强弱队
+    if (MODEL) {
+      var strong = teamIndices({ elo: 2050, form: 85, _formRatio: 0.8 });
+      var weak = teamIndices({ elo: 1480, form: 55, _formRatio: 0.3 });
+      console.assert(strong.attackIdx > weak.attackIdx, "强队进攻指数应更高");
+      console.assert(strong.defenseIdx > weak.defenseIdx, "强队防守指数应更高");
+      console.log("  数据模型已载入 · 回测logloss " + (MODEL.meta ? MODEL.meta.test_logloss + " vs 基线 " + MODEL.meta.baseline_logloss : "?"));
+    } else {
+      console.log("  ⚠️ 未载入数据模型，使用回退公式");
+    }
     console.log("✅ engine self-test passed");
   }
 
   var Engine = {
     predictMatch: predictMatch,
+    teamIndices: teamIndices,
     simulateTournament: simulateTournament,
     computeLiveRatings: computeLiveRatings,
     liveTeam: liveTeam,

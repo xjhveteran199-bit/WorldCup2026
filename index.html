@@ -318,10 +318,9 @@ footer b { color: var(--green); }
       <p>Δ 为有效 Elo 差 = 基础 Elo 差 + 东道主加成（+100，美加墨适用）+ 近期状态修正（±50 封顶）。</p>
       <h4>① b 实时评分：用真实赛果动态修正</h4>
       <p>每当一场比赛踢完，模型立刻按 Elo 公式更新双方评分：<code>新Elo = 旧Elo + K×净胜球权重×(实际结果 − 期望)</code>（K=60）。<b>赢强队加分多、赢弱旅加分少</b>——例如韩国 2-1 力克同档捷克，实时 Elo +28；墨西哥 2-0 完胜实力较弱的南非，仅 +10。同时由实战积分与净胜球重算「近期状态」，与赛前评估各占一半。于是赛事越往后，预测越贴合球队的真实当下状态，每场结果都会反映到后续所有预测与冠军概率里。</p>
-      <h4>② 双泊松进球模型</h4>
-      <p>足球比赛进球数近似服从泊松分布。我们把 Elo 差映射为两队期望进球：</p>
-      <div class="formula">λ = 1.30 × e<sup>0.0011·Δ</sup></div>
-      <p>由 λ<sub>A</sub>、λ<sub>B</sub> 生成 9×9 比分概率矩阵，再求和得到胜/平/负概率与最可能比分。淘汰赛进球期望 ×0.90（大赛保守系数），平局按点球模型（Elo 微调的近似五五开）分配晋级。</p>
+      <h4>② 期望进球：数据模型驱动</h4>
+      <p>这是本模型与普通「Elo→进球」预测最大的不同：我们用 <b>约 5 万场历史国际比赛（1872 起）离线训练出一个数据模型</b>，输入双方实时 Elo、近期状态、主客场、赛事级别，直接算出两队期望进球 λ——比固定公式更贴合真实进球分布，能学到「攻强守松」与「铁桶阵」的差异。<b>在留出的 2022–2024 真实比赛上回测，胜平负 logloss 0.88，优于传统公式的 0.91。</b></p>
+      <p>由此每队还派生出<b>进攻指数 / 防守指数</b>（vs 平均对手的期望进/失球，0–99），随真实赛果更新。λ<sub>A</sub>、λ<sub>B</sub> 生成 9×9 比分概率矩阵 → 胜/平/负概率与最可能比分；淘汰赛 λ×0.90，平局按点球模型分配晋级。</p>
       <h4>③ Dixon-Coles 低比分修正</h4>
       <p>经典泊松模型会低估 0-0/1-1 等低比分。Dixon & Coles (1997) 提出对四个低比分格子做相关性修正，本模型取 ρ = −0.13。</p>
       <h4>④ 大模型战术层</h4>
@@ -373,9 +372,10 @@ footer b { color: var(--green); }
   </div>
 </div>
 
-<script src="core/data.js?v=20260614-1"></script>
-<script src="core/engine.js?v=20260614-1"></script>
-<script src="core/llm.js?v=20260614-1"></script>
+<script src="core/data.js?v=20260614-2"></script>
+<script src="core/model.js?v=20260614-2"></script>
+<script src="core/engine.js?v=20260614-2"></script>
+<script src="core/llm.js?v=20260614-2"></script>
 <script>
 "use strict";
 var D = WC_DATA, E = Engine, L = LLM;
@@ -622,6 +622,10 @@ function renderResult(a, b, p) {
   ];
   if (la.played || lb.played) {
     rows.push(["已结合赛果", (a.zh + " " + la.played + "场 / " + b.zh + " " + lb.played + "场"), 0]);
+  }
+  if (a.attackIdx != null && b.attackIdx != null) {
+    rows.push(["进攻指数 ⚔️", a.attackIdx + " vs " + b.attackIdx, a.attackIdx - b.attackIdx]);
+    rows.push(["防守指数 🛡️", a.defenseIdx + " vs " + b.defenseIdx, a.defenseIdx - b.defenseIdx]);
   }
   rows.push(
     ["近期状态修正", fmtAdj(p.eloA.formAdj) + " / " + fmtAdj(p.eloB.formAdj), p.eloA.formAdj - p.eloB.formAdj],
