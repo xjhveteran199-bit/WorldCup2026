@@ -1,20 +1,42 @@
 <view class="wrap">
+  <!-- 模型战绩（无未来信息回测） -->
+  <view class="card track" wx:if="{{track}}">
+    <view class="card-h">📊 模型战绩 · 实战回测 <text class="pill">无未来信息</text></view>
+    <view class="dp">按赛程顺序、<text class="b">仅用每场之前的赛果</text>预测每一场已赛比赛（不含该场及之后任何信息），如实统计——这是诚实衡量模型的尺子，也杜绝「事后诸葛」。</view>
+    <view class="tgrid">
+      <view class="ts"><view class="tv">{{track.n}}</view><view class="tl">已回测(场)</view></view>
+      <view class="ts"><view class="tv">{{track.topHit}}%</view><view class="tl">最看好命中</view></view>
+      <view class="ts"><view class="tv">{{track.scoreHit}}/{{track.n}}</view><view class="tl">比分命中</view></view>
+      <view class="ts"><view class="tv {{track.beat?'':'dim'}}">{{track.logloss}}</view><view class="tl">logloss{{track.beat?' ✓优':''}}</view></view>
+      <view class="ts"><view class="tv dim">{{track.coin}}</view><view class="tl">抛硬币基准</view></view>
+      <view class="ts"><view class="tv">{{track.brier}}</view><view class="tl">Brier</view></view>
+    </view>
+    <view class="tlist">
+      <view class="tr {{item.hit?'hit':'miss'}}" wx:for="{{track.rows}}" wx:key="key">
+        <text class="tm">{{item.txt}}</text>
+        <text class="tp">{{item.top}}</text>
+        <text class="to">{{item.mark}}</text>
+      </view>
+    </view>
+    <view class="dp">⚽ 单场足球变数极大（红牌、点球、门框、裁判），任何模型单场命中率天花板约 50–55%。<text class="b">看模型能否长期跑赢「抛硬币」（随机 33%、logloss≈1.10）、以及概率是否校准</text>，比纠结单场对错更有意义。以上数字均为真实回测，不挑不藏。</view>
+  </view>
+
   <view class="card doc">
     <view class="card-h">🔬 预测模型方法论</view>
 
     <view class="dh">① Elo 评分体系</view>
-    <view class="dp">采用 eloratings.net 世界足球 Elo 评分（基线 {{eloDate}}）。Elo 源自国际象棋，每场赛后按胜负、比分差、赛事权重动态更新，比 FIFA 排名更灵敏。两队胜负期望：</view>
+    <view class="dp">采用世界足球 Elo 评分体系（源自国际象棋，每场赛后按胜负、比分差、赛事权重动态更新，比 FIFA 排名更灵敏）。关键改进：球队 Elo 与下文神经网络<text class="b">同源同标度</text>——由约 5 万场历史国际比赛的同一套时序 Elo 统一算出（赛前基线 {{eloDate}}），训练时见到的评分和预测时输入的评分严格一致。两队胜负期望：</view>
     <view class="formula">Wₑ = 1 / (1 + 10^(−Δ/400))</view>
     <view class="dp">Δ = 基础Elo差 + 东道主加成(+100，美加墨) + 近期状态修正(±50封顶)。</view>
 
     <view class="dh">①b 实时评分：用真实赛果动态修正</view>
-    <view class="dp">每场比赛踢完，模型立刻按 Elo 公式更新双方评分（K=60，含净胜球权重）：赢强队加分多、赢弱旅加分少。例如韩国 2-1 力克同档捷克实时 Elo +28，墨西哥 2-0 完胜较弱的南非仅 +10。同时由实战积分与净胜球重算「近期状态」。赛事越往后，预测越贴合球队真实当下状态，每场结果都反映到后续所有预测与冠军概率里。</view>
+    <view class="dp">每场比赛踢完，模型立刻按 Elo 公式更新双方评分（K=60，含净胜球权重）：赢强队加分多、赢弱旅加分少。例如韩国 2-1 力克同档捷克实时 Elo +25，墨西哥 2-0 完胜较弱的南非仅 +12，而澳大利亚 2-0 爆冷胜土耳其一举 +54。同时由实战积分与净胜球重算「近期状态」。赛事越往后，预测越贴合球队真实当下状态，每场结果都反映到后续所有预测与冠军概率里。</view>
 
     <view class="dh">② 深度学习神经网络模型 🧠</view>
     <view class="dp">核心引擎：用约 5 万场历史国际比赛（1872 起至今）离线训练了一个深度神经网络，输入双方实时 Elo、近期状态、主客场、赛事级别等特征，由网络直接学习并输出两队期望进球 λ——比固定公式更贴合真实进球分布，能自动学到「攻强守松」与「铁桶阵」的差异。</view>
     <view class="formula" style="text-align:left;font-style:normal">🧠 结构：7 维特征 → 隐藏层(16) → 隐藏层(8) → λ主, λ客
-📚 训练 26,888 场，泊松最大似然
-🎯 回测(2022–24)：胜平负 logloss 0.88 ＜ 传统公式 0.91</view>
+📚 训练 {{mdSamples}} 场正式比赛（1998 后，已剔除友谊赛减噪），泊松最大似然
+🎯 留出回测(2022+)：胜平负 logloss {{mdLL}} ＜ 同特征传统公式 {{mdBase}}</view>
     <view class="dp">注：这是<text style="color:#ffd34d">判别式预测模型</text>，只输出概率数字，不生成任何文字/图像/内容（不属于深度合成）。由网络输出派生每队「进攻指数 / 防守指数」（0–99），随真实赛果更新。λ 生成 9×9 比分概率矩阵→胜/平/负与最可能比分；淘汰赛 λ×0.90，平局按点球模型分配晋级。</view>
 
     <view class="dh">③ Dixon-Coles 低比分修正</view>
@@ -23,8 +45,14 @@
     <view class="dh">④ 冠军模拟器</view>
     <view class="dp">蒙特卡洛法：按模型给每场比分矩阵采样，完整走完小组赛→32强→决赛，重复一万次统计夺冠频率。已赛场次锁定真实比分。</view>
 
+    <view class="dh">⑤ 怎么看「准确率」(重要)</view>
+    <view class="dp">足球是低进球、强随机的运动，<text class="b">别用单场对错评判模型</text>：</view>
+    <view class="dp">• <text class="b">「最看好」命中率有天花板</text>：平局约占三成却几乎从不是三选一里概率最高的，所以即便比分押中（如巴西 1-1 摩洛哥），也可能因「最看好是巴西胜」算 miss；单场命中率天花板约 50–55%。</view>
+    <view class="dp">• <text class="b">看 logloss / Brier 而非命中率</text>：它们衡量「概率给得准不准」，跑赢抛硬币基线（logloss≈1.10、Brier≈0.67）才算有信息量。</view>
+    <view class="dp">• <text class="b">看校准</text>：模型说「60% 会赢」的那批比赛，长期真实胜率应接近 60%。样本越大越准，首轮爆冷扎堆时单看几场会失真。真实战绩见本页顶部「📊 模型战绩」。</view>
+
     <view class="dh warn">⚠️ 数据与局限</view>
-    <view class="dp">「近期状态」为编辑评估值。模型无法预知红牌、伤病和裁判——这正是足球的魅力。本工具为数据娱乐产品，预测仅供参考，不构成任何竞彩或投注建议。</view>
+    <view class="dp">「近期状态」由近期战绩数据映射（与模型同源），可在预测页手动覆盖。模型无法预知红牌、伤病和裁判——这正是足球的魅力。本工具为数据娱乐产品，预测仅供参考，不构成任何竞彩建议。</view>
   </view>
   <view class="disclaimer">🐙 硅基看球 · 小红书 <text class="em">@碳化硅SiC</text></view>
 </view>

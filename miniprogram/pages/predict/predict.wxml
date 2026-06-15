@@ -53,6 +53,7 @@
         <view class="ts" wx:for="{{result.topScores}}" wx:key="s">{{item.s}} <text class="ts-p">{{item.p}}</text></view>
       </view>
       <view class="ko-line" wx:if="{{result.koLine}}">{{result.koLine}}</view>
+      <view class="hint" style="margin-top:12rpx">⚽ 足球单场变数大，概率仅供参考，不构成竞彩建议。模型长期真实战绩与校准见底部「🔬 模型」页 📊。</view>
     </view>
 
     <!-- 热力图 -->

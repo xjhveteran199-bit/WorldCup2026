@@ -46,14 +46,16 @@ HA = 65.0   # 主场 Elo 加成（非中立）
 
 rows = []
 SAMPLE_FROM = pd.Timestamp("1998-01-01")
+RATINGS_ASOF = pd.Timestamp("2026-06-11")   # 导出 ratings 的赛前截止（WC2026 开赛前；防把已赛 WC 比分算进基线）
+elo_asof, form_asof = {}, {}                 # 各队截至赛前的 Elo / 近期状态率快照
 
 for _, m in df.iterrows():
     h, a = m["home_team"], m["away_team"]
     eh, ea = get_elo(h), get_elo(a)
     fh, fa = get_form(h), get_form(a)
     ha = 0.0 if m["neutral"] else HA
-    # 采样（赛前特征 → 该场比分）
-    if m["date"] >= SAMPLE_FROM:
+    # 采样（赛前特征 → 该场比分）；A2: 剔除友谊赛(imp==0)减噪，仅取正式比赛
+    if m["date"] >= SAMPLE_FROM and m["imp"] >= 1:
         rows.append({
             "elo_h": eh, "elo_a": ea, "diff": (eh + ha) - ea,
             "neutral": 1.0 if m["neutral"] else 0.0,
@@ -74,6 +76,10 @@ for _, m in df.iterrows():
     for t, pts in ((h, 3 if gh > ga else (1 if gh == ga else 0)),
                    (a, 3 if ga > gh else (1 if gh == ga else 0))):
         r = recent.get(t, []); r.append(pts); recent[t] = r[-5:]
+    # 赛前快照（截至 WC2026 开赛前的最新一场）
+    if m["date"] < RATINGS_ASOF:
+        elo_asof[h] = elo[h]; elo_asof[a] = elo[a]
+        form_asof[h] = get_form(h); form_asof[a] = get_form(a)
 
 data = pd.DataFrame(rows)
 print(f"采样比赛数(1998+): {len(data)}")
@@ -203,3 +209,22 @@ with open(os.path.join(ROOT, "core", "model.js"), "w", encoding="utf-8") as f:
     f.write(js)
 sz = os.path.getsize(os.path.join(ROOT, "core", "model.js"))
 print(f"✅ 导出 core/model.js （{sz} 字节，{len(data)} 场训练）")
+
+# ---------- 7. 导出 core/ratings.js（赛前同源 Elo/form，apply-ratings.js 写回 data.js）----------
+# 与训练同一套时序 Elo 同标度，消除「线上 eloratings 标度 ≠ 训练标度」导致的标准化错位。
+ratings = {}
+for t in sorted(elo.keys()):
+    e = elo_asof.get(t, elo.get(t, BASE))
+    fr = form_asof.get(t, 0.5)
+    ratings[t] = {"elo": round(float(e), 1), "form": round(float(fr), 4)}
+rj = json.dumps(ratings, ensure_ascii=False, separators=(",", ":"))
+rmeta = json.dumps({"asof": RATINGS_ASOF.date().isoformat(), "teams": len(ratings),
+                    "source_rows": int(len(df))}, ensure_ascii=False, separators=(",", ":"))
+rjs = ("// 训练同源评分（赛前 Elo + 近期状态率 form 0~1）——离线产出，apply-ratings.js 写回 core/data.js\n"
+       "var WC_RATINGS=" + rj + ";\nvar WC_RATINGS_META=" + rmeta + ";\n"
+       "if(typeof module!==\"undefined\"&&module.exports)module.exports={ratings:WC_RATINGS,meta:WC_RATINGS_META};\n"
+       "else if(typeof window!==\"undefined\"){window.WC_RATINGS=WC_RATINGS;window.WC_RATINGS_META=WC_RATINGS_META;}")
+with open(os.path.join(ROOT, "core", "ratings.js"), "w", encoding="utf-8") as f:
+    f.write(rjs)
+asof_n = sum(1 for t in elo if t in elo_asof)
+print(f"✅ 导出 core/ratings.js （{len(ratings)} 队，赛前截止 {RATINGS_ASOF.date()}，含赛前快照 {asof_n} 队）")

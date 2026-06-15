@@ -244,6 +244,7 @@ footer b { color: var(--green); }
         <div class="score-big"><div class="s" id="bigScore">-</div><div class="lab">模型最可能比分</div></div>
         <div class="top-scores" id="topScores"></div>
         <div id="koLine" class="fuse-note"></div>
+        <p class="hint" style="margin-top:8px">⚽ 足球单场变数大，概率仅供参考，不构成竞彩建议。模型的长期真实战绩与校准见底部「🔬 模型」页 📊。</p>
       </div>
 
       <div class="card">
@@ -314,17 +315,38 @@ footer b { color: var(--green); }
 
   <!-- ============ 页4：模型说明 ============ -->
   <div class="page" id="pg-doc">
+    <style>
+      .track-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+      .ts{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:10px 6px;text-align:center}
+      .ts .tv{font-size:1.12rem;font-weight:800;color:var(--green)}
+      .ts .tv.dim{color:var(--sub)}
+      .ts .tl{font-size:.7rem;color:var(--sub);margin-top:3px}
+      .track-list{margin-top:6px}
+      .tr{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:.82rem}
+      .tr .tm{flex:1}
+      .tr .tp{color:var(--sub);font-size:.74rem;white-space:nowrap}
+      .tr .to{width:48px;text-align:right;font-weight:800}
+      .tr.hit .to{color:var(--green)}
+      .tr.miss .to{color:var(--sub)}
+    </style>
+    <div class="card" id="trackCard" style="margin-top:12px">
+      <h3>📊 模型战绩 · 实战回测 <span class="tag">无未来信息</span></h3>
+      <p class="hint">按赛程顺序、<b>仅用每场之前的赛果</b>预测每一场已赛比赛（不含该场及之后任何信息），如实统计——这是诚实衡量模型的尺子，也杜绝「事后诸葛」。</p>
+      <div class="track-grid" id="trackStats"></div>
+      <div class="track-list" id="trackList"></div>
+      <p class="hint" style="margin-top:10px">⚽ 单场足球变数极大（红牌、点球、门框、裁判），任何模型单场命中率天花板约 50–55%。<b>看模型能否长期跑赢「抛硬币」（随机 33%、logloss≈1.10）、以及概率是否校准</b>，比纠结单场对错更有意义。以上数字均为真实回测，不挑不藏。</p>
+    </div>
     <div class="card doc" style="margin-top:12px">
       <h3>🔬 预测模型方法论</h3>
       <h4>① Elo 评分体系</h4>
-      <p>采用 eloratings.net 的世界足球 Elo 评分（数据基线 <code id="docEloDate"></code>）。Elo 是国际象棋起源的实力量化体系，每场比赛后根据胜负、比分差和比赛权重动态更新，比 FIFA 排名更灵敏。两队相遇时的胜负期望：</p>
+      <p>采用世界足球 Elo 评分体系（国际象棋起源的实力量化方法，每场赛后按胜负、比分差、赛事权重动态更新，比 FIFA 排名更灵敏）。关键改进：球队 Elo 与下文神经网络<b>同源同标度</b>——由约 5 万场历史国际比赛的同一套时序 Elo 统一算出（赛前基线 <code id="docEloDate"></code>），让训练时见到的评分和预测时输入的评分严格一致。两队相遇时的胜负期望：</p>
       <div class="formula">W<sub>e</sub> = 1 / (1 + 10<sup>−Δ/400</sup>)</div>
       <p>Δ 为有效 Elo 差 = 基础 Elo 差 + 东道主加成（+100，美加墨适用）+ 近期状态修正（±50 封顶）。</p>
       <h4>① b 实时评分：用真实赛果动态修正</h4>
-      <p>每当一场比赛踢完，模型立刻按 Elo 公式更新双方评分：<code>新Elo = 旧Elo + K×净胜球权重×(实际结果 − 期望)</code>（K=60）。<b>赢强队加分多、赢弱旅加分少</b>——例如韩国 2-1 力克同档捷克，实时 Elo +28；墨西哥 2-0 完胜实力较弱的南非，仅 +10。同时由实战积分与净胜球重算「近期状态」，与赛前评估各占一半。于是赛事越往后，预测越贴合球队的真实当下状态，每场结果都会反映到后续所有预测与冠军概率里。</p>
+      <p>每当一场比赛踢完，模型立刻按 Elo 公式更新双方评分：<code>新Elo = 旧Elo + K×净胜球权重×(实际结果 − 期望)</code>（K=60）。<b>赢强队加分多、赢弱旅加分少</b>——例如韩国 2-1 力克同档捷克，实时 Elo +25；墨西哥 2-0 完胜实力较弱的南非，仅 +12；而澳大利亚 2-0 爆冷胜土耳其，一举 +54。同时由实战积分与净胜球重算「近期状态」，与赛前评估各占一半。于是赛事越往后，预测越贴合球队的真实当下状态，每场结果都会反映到后续所有预测与冠军概率里。</p>
       <h4>② 深度学习神经网络模型 🧠</h4>
       <p>这是本预测引擎的核心、也是与普通「Elo→进球」预测最大的不同：我们用 <b>约 5 万场历史国际比赛（1872 起至今）离线训练了一个深度神经网络</b>，输入双方实时 Elo、近期状态、主客场、赛事级别等特征，由网络直接学习并输出两队的期望进球 λ——比任何固定公式都更贴合真实进球分布，能自动学到「攻强守松」与「铁桶阵」的差异。</p>
-      <div class="formula" style="text-align:left;font-style:normal">🧠 网络结构：输入 7 维特征 → 隐藏层(16) → 隐藏层(8) → 输出 λ<sub>主</sub>, λ<sub>客</sub><br>📚 训练样本：26,888 场（1998 年后）　训练目标：泊松最大似然<br>🎯 回测（2022–2024 真实比赛）：胜平负 logloss <b style="color:var(--green)">0.88</b>，优于传统公式 0.91</div>
+      <div class="formula" style="text-align:left;font-style:normal">🧠 网络结构：输入 7 维特征 → 隐藏层(16) → 隐藏层(8) → 输出 λ<sub>主</sub>, λ<sub>客</sub><br>📚 训练样本：<span id="mdSamples">17,861</span> 场正式比赛（1998 年后，已剔除友谊赛减噪）　训练目标：泊松最大似然<br>🎯 留出回测（2022+ 真实比赛）：胜平负 logloss <b style="color:var(--green)" id="mdLL">0.887</b>，优于同特征传统公式 <span id="mdBase">0.899</span></div>
       <p>这是<b>判别式预测模型</b>——只输出概率数字，不生成任何文字、图像或内容。由网络输出还派生出每队的<b>进攻指数 / 防守指数</b>（0–99），随真实赛果实时更新。λ 生成 9×9 比分概率矩阵 → 胜/平/负与最可能比分；淘汰赛 λ×0.90，平局按点球模型分配晋级。</p>
       <h4>③ Dixon-Coles 低比分修正</h4>
       <p>经典泊松模型会低估 0-0/1-1 等低比分。Dixon & Coles (1997) 提出对四个低比分格子做相关性修正，本模型取 ρ = −0.13。</p>
@@ -332,8 +354,13 @@ footer b { color: var(--green); }
       <p>统计模型只看数字，看不见「阵型相克」「教练博弈」「更衣室状态」。接入大模型后，AI 基于阵容、战术风格、教练履历与你提供的最新情报输出定性分析，并对统计概率做<b>有界修正（每项 ≤ ±8 个百分点）</b>——既引入足球智慧，又不让 AI 胡说八道掩盖统计基线。两套结果并排展示，透明可复现。</p>
       <h4>⑤ 冠军模拟器</h4>
       <p>蒙特卡洛法：按上述模型给每场比赛的比分矩阵采样，完整走完小组赛 → 32 强 → 决赛流程，重复一万次统计夺冠频率。已赛场次锁定真实比分。注：小组第三晋级落位采用简化规则（未复刻 FIFA 官方落位表），对冠军概率影响极小。</p>
+      <h4>⑥ 怎么看「准确率」（重要）</h4>
+      <p>足球是低进球、强随机的运动，<b>别用单场对错评判模型</b>。几条诚实的标尺：</p>
+      <p>• <b>「最看好」命中率有天花板</b>：平局约占三成，却几乎从不是「胜/平/负」三选一里概率最高的——只要有微弱热门，胜（或负）的概率就压过平。所以即便比分押中（如巴西 1-1 摩洛哥），也可能因「最看好是巴西胜」被算 miss。单场命中率天花板本就约 50–55%。</p>
+      <p>• <b>看 logloss / Brier 而非命中率</b>：它们衡量「概率给得准不准」。跑赢「抛硬币」基线（logloss≈1.10、Brier≈0.67）才算有信息量。</p>
+      <p>• <b>看校准</b>：模型说「60% 会赢」的那批比赛，长期真实胜率应接近 60% 才算靠谱。样本越大越能体现，小组赛首轮爆冷扎堆时单看几场会失真。真实战绩见本页顶部「📊 模型战绩」。</p>
       <h4>⚠️ 数据与局限</h4>
-      <p>Elo / FIFA 排名 / 已赛结果基线见页脚日期；「近期状态」为编辑评估值，可在预测页手动调整。模型无法预知红牌、伤病和裁判——这正是足球的魅力。</p>
+      <p>Elo / form / FIFA 排名 / 已赛结果基线见页脚日期；「近期状态」由近期战绩数据映射（与模型同源），可在预测页手动覆盖。模型无法预知红牌、伤病和裁判——这正是足球的魅力。</p>
     </div>
   </div>
 
@@ -377,10 +404,10 @@ footer b { color: var(--green); }
   </div>
 </div>
 
-<script src="core/data.js?v=20260615-2"></script>
-<script src="core/model.js?v=20260615-2"></script>
-<script src="core/engine.js?v=20260615-2"></script>
-<script src="core/llm.js?v=20260615-2"></script>
+<script src="core/data.js?v=20260615-3"></script>
+<script src="core/model.js?v=20260615-3"></script>
+<script src="core/engine.js?v=20260615-3"></script>
+<script src="core/llm.js?v=20260615-3"></script>
 <script>
 "use strict";
 var D = WC_DATA, E = Engine, L = LLM;
@@ -415,8 +442,49 @@ function init() {
   document.getElementById("docEloDate").textContent = D.eloDate;
   document.getElementById("ftElo").textContent = D.eloDate;
   document.getElementById("ftFifa").textContent = D.fifaDate;
+  fillModelMeta();
+  renderTrackRecord();
   initProviders();
   maybeStartDemo();
+}
+
+/* ============ 模型战绩（无未来信息回测）+ 方法论动态数字 ============ */
+function fillModelMeta() {
+  try {
+    var m = (window.WC_MODEL || {}).meta; if (!m) return;
+    var set = function (id, v) { var e = document.getElementById(id); if (e) e.textContent = v; };
+    set("mdSamples", Number(m.samples).toLocaleString());
+    set("mdLL", m.test_logloss);
+    set("mdBase", m.baseline_logloss);
+  } catch (e) {}
+}
+
+function renderTrackRecord() {
+  var card = document.getElementById("trackCard");
+  if (!card) return;
+  if (!window.Engine || !Engine.backtestWC) { card.style.display = "none"; return; }
+  var bt = Engine.backtestWC(D);
+  if (!bt.n) { card.style.display = "none"; return; }
+  var beat = bt.logloss < bt.coinLogloss;
+  var stats = [
+    { v: bt.n, l: "已回测(场)" },
+    { v: Math.round(bt.topHitRate * 100) + "%", l: "最看好命中" },
+    { v: bt.scoreHit + "/" + bt.n, l: "比分命中" },
+    { v: bt.logloss.toFixed(3), l: "logloss" + (beat ? " ✓优" : ""), dim: !beat },
+    { v: bt.coinLogloss.toFixed(2), l: "抛硬币基准", dim: true },
+    { v: bt.brier.toFixed(3), l: "Brier" }
+  ];
+  document.getElementById("trackStats").innerHTML = stats.map(function (s) {
+    return '<div class="ts"><div class="tv' + (s.dim ? " dim" : "") + '">' + s.v + '</div><div class="tl">' + s.l + '</div></div>';
+  }).join("");
+  var TR = { W: "主胜", D: "平局", L: "客胜" };
+  document.getElementById("trackList").innerHTML = bt.rounds.slice(-16).reverse().map(function (r) {
+    var h = D.teams[r.h], a = D.teams[r.a];
+    return '<div class="tr ' + (r.hit ? "hit" : "miss") + '">'
+      + '<span class="tm">' + h.flag + h.zh + ' <b>' + r.gh + '-' + r.ga + '</b> ' + a.zh + a.flag + '</span>'
+      + '<span class="tp">看好' + TR[r.top] + ' ' + Math.round(r.topP * 100) + '%</span>'
+      + '<span class="to">' + (r.hit ? "✓" : "✗") + (r.scoreHit ? " 🎯" : "") + '</span></div>';
+  }).join("");
 }
 
 /* ============ 自动演示模式（录屏用） ============ */

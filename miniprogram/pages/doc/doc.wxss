@@ -3,3 +3,20 @@
 .doc .dp { font-size: 26rpx; line-height: 1.8; color: #d8c4b8; }
 .formula { background: #19090b; border: 1rpx solid #4a2520; border-radius: 14rpx; padding: 18rpx;
   text-align: center; font-style: italic; color: #ffd34d; font-size: 30rpx; margin: 14rpx 0; }
+
+/* 模型战绩卡 */
+.dp .b, .b { color: #fdeee4; font-weight: 700; }
+.track .pill { display: inline-block; font-size: 20rpx; color: #c49b8b; border: 1rpx solid #4a2520;
+  background: #2e1614; border-radius: 20rpx; padding: 2rpx 12rpx; vertical-align: middle; font-weight: 600; }
+.tgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12rpx; margin: 20rpx 0; }
+.ts { background: #2e1614; border: 1rpx solid #4a2520; border-radius: 16rpx; padding: 16rpx 8rpx; text-align: center; }
+.ts .tv { font-size: 38rpx; font-weight: 800; color: #ffae00; }
+.ts .tv.dim { color: #c49b8b; }
+.ts .tl { font-size: 21rpx; color: #c49b8b; margin-top: 4rpx; }
+.tlist { margin-top: 8rpx; }
+.tr { display: flex; align-items: center; padding: 12rpx 0; border-bottom: 1rpx dashed #4a2520; font-size: 24rpx; }
+.tr .tm { flex: 1; color: #d8c4b8; }
+.tr .tp { color: #c49b8b; font-size: 22rpx; margin: 0 12rpx; white-space: nowrap; }
+.tr .to { width: 92rpx; text-align: right; font-weight: 800; }
+.tr.hit .to { color: #ffae00; }
+.tr.miss .to { color: #c49b8b; }

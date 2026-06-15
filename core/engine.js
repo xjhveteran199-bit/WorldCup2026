@@ -57,7 +57,13 @@
     var fh = (teamA._formRatio != null) ? teamA._formRatio : formRatio(teamA.form);
     var fa = (teamB._formRatio != null) ? teamB._formRatio : formRatio(teamB.form);
     // 特征顺序须与训练一致：elo_h, elo_a, diff, neutral, imp, form_h, form_a
-    return modelLambdas([eh, ea, diff, neutral, WC_IMP, fh, fa]);
+    var fwd = modelLambdas([eh, ea, diff, neutral, WC_IMP, fh, fa]);
+    // 中立场（无东道主）：名义主客只是排程产物，去除模型残留主场偏置 → 正反前向取平均（对称）
+    if (neutral) {
+      var rev = modelLambdas([ea, eh, -diff, neutral, WC_IMP, fa, fh]);
+      return [(fwd[0] + rev[1]) / 2, (fwd[1] + rev[0]) / 2];
+    }
+    return fwd;
   }
   // 引擎 form(0-100) → 训练用的近期积分率(0~1) 的近似
   function formRatio(form) { return clamp((form - 40) / 55, 0, 1); }
@@ -194,7 +200,7 @@
       var r = R[c];
       if (r.played === 0) {
         r.form = r.baseForm; r.eloDelta = 0; r.elo = Math.round(r.elo);
-        r.formRatio = 0.5; return;  // 近期积分率默认 0.5（与训练一致）
+        r.formRatio = formRatio(r.baseForm); return;  // 未赛：用真实赛前状态率（A3，data.js form 同源），不再硬编码 0.5
       }
       var ppg = r.recent.reduce(function (s, m) { return s + m.pts; }, 0) / r.played; // 0~3
       var gdAvg = r.recent.reduce(function (s, m) { return s + m.gd; }, 0) / r.played;
@@ -205,6 +211,94 @@
       r.formRatio = ppg / 3;  // 0~1，喂给数据模型的近期状态特征
     });
     return R;
+  }
+
+  /**
+   * 严谨 walk-forward 回测：按赛程顺序，**只用该场之前的赛果**更新评分来预测每场已赛比赛
+   * （无任何未来信息泄漏）。复用 computeLiveRatings 的 Elo/form 更新逻辑，改成「先预测后更新」。
+   * 输出逐场预测 vs 实际、最看好命中、比分命中、Brier、校准分桶，及汇总 logloss / vs 抛硬币基准。
+   * 这是诚实衡量模型的尺子，也是「模型战绩」页的数据源。
+   */
+  function backtestWC(data) {
+    var R = {};
+    Object.keys(data.teams).forEach(function (c) {
+      var t = data.teams[c];
+      R[c] = { elo: t.elo, baseForm: t.form, played: 0, recent: [] };
+    });
+    // 由当前累计赛果推该队赛前 form / formRatio（与 computeLiveRatings 同一套口径）
+    function curForm(r) {
+      if (r.played === 0) return { form: r.baseForm, formRatio: formRatio(r.baseForm) };
+      var ppg = r.recent.reduce(function (s, m) { return s + m.pts; }, 0) / r.played;
+      var gdAvg = r.recent.reduce(function (s, m) { return s + m.gd; }, 0) / r.played;
+      var perf = clamp(55 + ppg * 12 + gdAvg * 4, 40, 98);
+      return { form: Math.round(FORM_BLEND * r.baseForm + (1 - FORM_BLEND) * perf), formRatio: ppg / 3 };
+    }
+    function teamObj(c) {
+      var r = R[c], cf = curForm(r);
+      return { elo: r.elo, form: cf.form, _formRatio: cf.formRatio };
+    }
+
+    var rounds = [], n = 0, sumLL = 0, sumBrier = 0, topHit = 0, scoreHit = 0;
+    var COIN_LL = Math.log(3);                 // 抛硬币（W/D/L 各 1/3）的逐场 logloss ≈ 1.0986
+    var calib = [];
+    for (var b = 0; b < 10; b++) calib.push({ n: 0, hit: 0, sumP: 0 });
+
+    data.fixtures.forEach(function (fx) {
+      var res = data.results && data.results[fx.n];
+      if (!res || !R[fx.h] || !R[fx.a]) return;
+      var hA = data.hosts.indexOf(fx.h) >= 0, hB = data.hosts.indexOf(fx.a) >= 0;
+      var pred = predictMatch(teamObj(fx.h), teamObj(fx.a), { hostA: hA, hostB: hB });
+      var gh = res[0], ga = res[1];
+      var actual = gh > ga ? "W" : (gh === ga ? "D" : "L");
+      var pW = pred.pWin, pD = pred.pDraw, pL = pred.pLoss;
+      var pAct = actual === "W" ? pW : (actual === "D" ? pD : pL);
+      var ll = -Math.log(Math.max(pAct, 1e-9));
+      sumLL += ll;
+      sumBrier += Math.pow(pW - (actual === "W" ? 1 : 0), 2)
+                + Math.pow(pD - (actual === "D" ? 1 : 0), 2)
+                + Math.pow(pL - (actual === "L" ? 1 : 0), 2);
+      var top = (pW >= pD && pW >= pL) ? "W" : (pD >= pL ? "D" : "L");
+      var topP = Math.max(pW, pD, pL);
+      var hit = top === actual;
+      if (hit) topHit++;
+      var bi = Math.min(9, Math.floor(topP * 10));
+      calib[bi].n++; calib[bi].sumP += topP; if (hit) calib[bi].hit++;
+      var ts = pred.topScores[0];
+      var sHit = ts.a === gh && ts.b === ga;
+      if (sHit) scoreHit++;
+      n++;
+      rounds.push({ n: fx.n, h: fx.h, a: fx.a, gh: gh, ga: ga, actual: actual,
+        pW: pW, pD: pD, pL: pL, top: top, topP: topP, hit: hit,
+        predScore: [ts.a, ts.b], scoreHit: sHit, ll: ll });
+
+      // 用真实赛果更新评分（与 computeLiveRatings 内层同公式），供后续场次
+      var h = R[fx.h], a = R[fx.a];
+      var dr = h.elo - a.elo;
+      var we = 1 / (1 + Math.pow(10, -dr / 400));
+      var S = gh > ga ? 1 : (gh < ga ? 0 : 0.5);
+      var gd = Math.abs(gh - ga);
+      var gdMul = gd <= 1 ? 1 : (gd === 2 ? 1.5 : (11 + gd) / 8);
+      var delta = ELO_K * gdMul * (S - we);
+      h.elo += delta; a.elo -= delta;
+      h.played++; a.played++;
+      h.recent.push({ pts: gh > ga ? 3 : (gh === ga ? 1 : 0), gd: gh - ga });
+      a.recent.push({ pts: ga > gh ? 3 : (gh === ga ? 1 : 0), gd: ga - gh });
+    });
+
+    return {
+      n: n,
+      logloss: n ? sumLL / n : 0,
+      coinLogloss: COIN_LL,
+      brier: n ? sumBrier / n : 0,
+      topHitRate: n ? topHit / n : 0,
+      scoreHit: scoreHit,
+      scoreHitRate: n ? scoreHit / n : 0,
+      rounds: rounds,
+      calibration: calib.map(function (c, i) {
+        return { lo: i / 10, hi: (i + 1) / 10, n: c.n,
+                 predicted: c.n ? c.sumP / c.n : 0, actual: c.n ? c.hit / c.n : 0 };
+      }).filter(function (c) { return c.n > 0; })
+    };
   }
 
   // 数据模型派生的「进攻/防守指数」（0-99）：该队 vs 平均对手(Elo≈1600)的期望进/失球
@@ -360,7 +454,7 @@
 
   /** 六维雷达数据（0-100）：进攻/防守/状态/大赛经验/教练/阵容深度 */
   function radarData(t, data) {
-    var eloNorm = clamp((t.elo - 1400) / (2160 - 1400) * 100, 5, 100);
+    var eloNorm = clamp((t.elo - 1480) / (2240 - 1480) * 100, 5, 100);  // 适配训练同源 Elo 标度（48强约1576~2225）
     var fifaNorm = clamp((90 - t.fifa) / 89 * 100, 5, 100);
     var host = data.hosts.indexOf(codeOf(t, data)) >= 0 ? 8 : 0;
     // 攻防优先用数据模型派生指数（liveTeam 已附加），否则回退 Elo 估算
@@ -420,6 +514,20 @@
           }
         }
       }
+      // 严谨 walk-forward 回测（B1）：诚实打印命中/比分命中/Brier/校准 vs 抛硬币
+      if (data.results && Object.keys(data.results).length) {
+        var bt = backtestWC(data);
+        console.assert(bt.n === Object.keys(data.results).length, "回测场次应等于已赛数, 实际 " + bt.n);
+        console.assert(bt.topHitRate >= 0 && bt.topHitRate <= 1, "命中率越界");
+        console.log("  ── 回测 " + bt.n + " 场（无未来信息）──");
+        console.log("    最看好命中 " + (bt.topHitRate * 100).toFixed(0) + "% | 比分命中 " + bt.scoreHit + "/" + bt.n
+          + " | logloss " + bt.logloss.toFixed(3) + " vs 抛硬币 " + bt.coinLogloss.toFixed(3)
+          + " | Brier " + bt.brier.toFixed(3));
+        console.log("    逐场: " + bt.rounds.map(function (r) {
+          return r.h + (r.gh) + "-" + (r.ga) + r.a + "(" + r.top + (r.hit ? "✓" : "✗")
+            + (r.scoreHit ? " 比分✓" : "") + ")";
+        }).join("  "));
+      }
     }
     // 数据模型：进攻/防守指数应区分强弱队
     if (MODEL) {
@@ -439,6 +547,7 @@
     teamIndices: teamIndices,
     simulateTournament: simulateTournament,
     computeLiveRatings: computeLiveRatings,
+    backtestWC: backtestWC,
     liveTeam: liveTeam,
     radarData: radarData,
     sampleScore: sampleScore,
