@@ -6,266 +6,376 @@
 <title>硅基章鱼 · 2026美加墨世界杯AI预测</title>
 <meta name="description" content="Elo+双泊松统计模型 × AI大模型战术分析，科学预测2026世界杯每一场比赛。模拟一万届世界杯，谁是冠军？">
 <style>
-:root {
-  --bg: #120608; --bg2: #1e0c0e; --card: #221012; --card2: #2e1614;
-  --line: #4a2520; --txt: #fdeee4; --sub: #c49b8b;
-  --green: #ffae00; --purple: #3da5ff; --gold: #ffd34d; --red: #ff4d4d;
-  --fire: #ff3d2e;
-  --grad: linear-gradient(135deg, #ff2d2e 0%, #ff7a1f 55%, #ffae00 100%);
+/* ============================================================
+   硅基章鱼 · 视觉系统 2.0（Claude Design 美化）
+   暖调深色基因 + 柔金主色 + 品红/紫「神经网络」签名色
+   ============================================================ */
+:root{
+  --bg:#150F0B; --bg2:#201810; --card:#261C15; --card2:#31231A;
+  --line:#473628; --line-2:#574532; --hair:rgba(255,238,230,.05);
+  --txt:#F2EADE; --sub:#B8A795; --faint:#8C7A68;
+  --amber:#C9A368; --amber-2:#B98D52; --gold:#D9C28C;
+  --fire:#C16A4E; --red:#BE6552; --cool:#6E7C92;
+  --magenta:#A86C86; --violet:#86699E;
+  --grad-fire:linear-gradient(135deg,#B85C45 0%,#C27A52 52%,#C9A368 100%);
+  --grad-neural:linear-gradient(135deg,#A86C86 0%,#86699E 100%);
+  --grad-cool:linear-gradient(135deg,#6E7C92,#7E789A);
+  --r-sm:10px; --r-md:14px; --r-lg:18px; --r-xl:22px; --r-pill:999px;
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:24px;
+  --sh-1:0 1px 0 var(--hair) inset;
+  --sh-card:0 8px 28px -12px rgba(0,0,0,.7), 0 1px 0 var(--hair) inset;
+  --sh-glow:0 6px 18px -10px rgba(193,106,78,.40);
+  --sh-neural:0 6px 18px -10px rgba(134,105,158,.32);
+  --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","HarmonyOS Sans","Microsoft YaHei",sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,"JetBrains Mono","Roboto Mono",Menlo,monospace;
 }
-* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html { font-size: 15px; }
-body {
-  background: var(--bg); color: var(--txt); min-height: 100vh;
-  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
-  padding-bottom: 76px;
-  background-image: radial-gradient(ellipse 80% 40% at 50% -10%, rgba(255,61,46,.22), transparent),
-                    radial-gradient(ellipse 60% 30% at 85% 110%, rgba(255,174,0,.10), transparent),
-                    repeating-linear-gradient(115deg, transparent 0 26px, rgba(255,77,46,.025) 26px 52px);
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{font-size:15px}
+body{
+  background:var(--bg);color:var(--txt);min-height:100vh;font-family:var(--sans);
+  font-size:15px;padding-bottom:74px;
+  background-image:radial-gradient(ellipse 80% 36% at 50% -8%,rgba(193,106,78,.12),transparent),
+                   radial-gradient(ellipse 60% 30% at 88% 108%,rgba(134,105,158,.08),transparent);
+  background-attachment:fixed;
 }
-.wrap { max-width: 560px; margin: 0 auto; padding: 0 14px; }
+.num{font-family:var(--mono);font-feature-settings:"tnum" 1;letter-spacing:-.01em}
+.wrap{max-width:560px;margin:0 auto;padding:0 14px}
+.ic{width:1em;height:1em;display:inline-block;vertical-align:-.14em;flex:none}
+.icc{display:inline-flex;align-items:center;justify-content:center;border-radius:9px;flex:none}
 
-/* ---------- 顶栏 ---------- */
-header { padding: 18px 0 6px; text-align: center; position: relative; }
-.logo { font-size: 1.65rem; font-weight: 900; letter-spacing: 2px; font-style: italic;
-  text-shadow: 0 0 24px rgba(255,61,46,.45); }
-.logo .oct { font-size: 1.8rem; }
-.logo .grad { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.tagline { color: var(--sub); font-size: .78rem; margin-top: 4px; font-style: italic; letter-spacing: 1px; }
-.live-chip { display: inline-block; margin-top: 8px; font-size: .68rem; font-weight: 800; color: #ffd34d;
-  border: 1px solid rgba(255,211,77,.5); border-radius: 20px; padding: 3px 12px; letter-spacing: 2px;
-  animation: pulse 1.6s infinite; }
-.dl-chip { display: inline-block; margin-top: 7px; font-size: .66rem; font-weight: 800;
-  background: linear-gradient(135deg, rgba(255,45,46,.18), rgba(61,165,255,.18));
-  border: 1px solid rgba(61,165,255,.5); color: #8fcaff; border-radius: 20px; padding: 3px 12px; letter-spacing: 1px; }
-@keyframes pulse { 50% { box-shadow: 0 0 14px rgba(255,61,46,.6); border-color: var(--fire); } }
-.gear { position: absolute; right: 0; top: 20px; background: var(--card); border: 1px solid var(--line);
-  border-radius: 10px; padding: 7px 11px; color: var(--txt); font-size: .85rem; cursor: pointer; }
-.gear.on { border-color: var(--green); color: var(--green); }
+/* 页面切换 */
+.page{display:none;animation:fade .26s ease}
+.page.on{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1}}
 
-/* ---------- 底部导航 ---------- */
-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(13,18,36,.96);
-  backdrop-filter: blur(12px); border-top: 1px solid var(--line); display: flex; z-index: 50; }
-nav button { flex: 1; background: none; border: none; color: var(--sub); padding: 9px 0 max(9px, env(safe-area-inset-bottom));
-  font-size: .72rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; }
-nav button .ic { font-size: 1.25rem; }
-nav button.on { color: var(--green); }
+/* 顶栏 / Hero */
+header{padding:20px 16px 8px;position:relative;text-align:center}
+.brand{display:inline-flex;align-items:center;gap:9px}
+.brand .mark{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;color:var(--gold);
+  background:radial-gradient(120% 120% at 30% 20%,#322318,#1E140C);border:1px solid var(--line-2);box-shadow:var(--sh-1);position:relative}
+.brand .mark svg{width:27px;height:27px}
+.brand .mark::after{content:"";position:absolute;inset:-1px;border-radius:13px;padding:1px;background:var(--grad-neural);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:.3}
+.octo-sm{width:1.05em;height:1.05em;vertical-align:-.16em;color:var(--gold)}
+.brand .name{font-size:1.5rem;font-weight:800;letter-spacing:-.01em;line-height:1;white-space:nowrap}
+.brand .name .grad{background:var(--grad-fire);-webkit-background-clip:text;background-clip:text;color:transparent}
+.tagline{color:var(--sub);font-size:.78rem;margin-top:8px;letter-spacing:.02em}
+.chips{display:flex;gap:7px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:.68rem;font-weight:700;border-radius:var(--r-pill);padding:5px 11px;letter-spacing:.02em}
+.chip.live{color:var(--gold);border:1px solid rgba(217,194,140,.45);background:rgba(217,194,140,.06)}
+.chip.live .dot{width:6px;height:6px;border-radius:50%;background:var(--fire);animation:ping 1.5s infinite}
+@keyframes ping{0%{box-shadow:0 0 0 0 rgba(193,106,78,.55)}70%{box-shadow:0 0 0 7px rgba(193,106,78,0)}100%{box-shadow:0 0 0 0 rgba(193,106,78,0)}}
+.chip.neural{color:#D2C2DE;border:1px solid rgba(134,105,158,.40);background:linear-gradient(135deg,rgba(168,108,134,.12),rgba(134,105,158,.12))}
+.chip.neural svg{color:#B9A8CC}
+.gear{position:absolute;right:16px;top:22px;width:38px;height:38px;border-radius:11px;background:var(--card);
+  border:1px solid var(--line);color:var(--sub);display:grid;place-items:center;cursor:pointer}
+.gear.on{border-color:var(--amber);color:var(--amber)}
 
-/* ---------- 通用 ---------- */
-.page { display: none; animation: fade .25s; }
-.page.on { display: block; }
-@keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; } }
-.card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; margin: 12px 0;
-  box-shadow: 0 4px 24px rgba(0,0,0,.35); }
-.card h3 { font-size: 1rem; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;
-  font-style: italic; font-weight: 900; letter-spacing: 1px;
-  border-left: 4px solid var(--fire); padding-left: 9px; }
-.btn { display: block; width: 100%; padding: 15px; border: none; border-radius: 14px; background: var(--grad);
-  color: #fff; font-size: 1.1rem; font-weight: 900; cursor: pointer; letter-spacing: 4px; font-style: italic;
-  text-shadow: 0 1px 3px rgba(0,0,0,.35); box-shadow: 0 4px 22px rgba(255,61,46,.45); }
-.btn:active { transform: scale(.98); }
-.btn.ghost { background: var(--card2); color: var(--txt); border: 1px solid var(--line); font-weight: 600; letter-spacing: 0; }
-.btn[disabled] { opacity: .5; }
-.hint { color: var(--sub); font-size: .75rem; line-height: 1.6; }
-.tag { display: inline-block; background: var(--card2); border: 1px solid var(--line); border-radius: 20px;
-  padding: 2px 10px; font-size: .72rem; color: var(--sub); margin: 2px 3px 2px 0; }
+/* 卡片 */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:var(--s4);margin:var(--s3) 0;box-shadow:var(--sh-card)}
+.card h3{font-size:.95rem;font-weight:800;letter-spacing:.01em;display:flex;align-items:center;gap:9px;margin-bottom:var(--s4)}
+.card h3 .icc{width:28px;height:28px;font-size:.95rem}
+.card h3 .tt-right{margin-left:auto}
+.icc.amber{background:linear-gradient(135deg,rgba(201,163,104,.18),rgba(185,141,82,.12));color:var(--amber);border:1px solid rgba(201,163,104,.28)}
+.icc.fire{background:linear-gradient(135deg,rgba(193,106,78,.18),rgba(194,122,82,.10));color:#C57E62;border:1px solid rgba(193,106,78,.28)}
+.icc.neural{background:linear-gradient(135deg,rgba(168,108,134,.16),rgba(134,105,158,.16));color:#B9A8CC;border:1px solid rgba(134,105,158,.32)}
+.icc.cool{background:rgba(110,124,146,.14);color:#9197AE;border:1px solid rgba(110,124,146,.3)}
 
-/* ---------- 对阵选择 ---------- */
-.vs-row { display: flex; align-items: center; gap: 10px; }
-.vs-row .side { flex: 1; }
-.vs-row .vs { font-weight: 900; font-size: 1.5rem; font-style: italic;
-  background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent;
-  text-shadow: 0 0 18px rgba(255,61,46,.35); }
-select, input[type=text], input[type=password], textarea {
-  width: 100%; background: var(--bg2); color: var(--txt); border: 1px solid var(--line);
-  border-radius: 12px; padding: 12px 10px; font-size: .95rem; outline: none; }
-select:focus, input:focus, textarea:focus { border-color: var(--green); }
-.team-pick { text-align: center; }
-.team-pick .flag { font-size: 2.6rem; line-height: 1.2; }
-.team-pick .meta { font-size: .7rem; color: var(--sub); margin-top: 3px; min-height: 1em; }
-.mode-row { display: flex; gap: 8px; margin: 12px 0; }
-.mode-row button { flex: 1; padding: 9px; border-radius: 10px; border: 1px solid var(--line);
-  background: var(--bg2); color: var(--sub); font-size: .85rem; cursor: pointer; }
-.mode-row button.on { border-color: var(--fire); color: #ff8a5e; background: rgba(255,61,46,.10); font-weight: 800; }
-details.adv { margin: 10px 0; }
-details.adv summary { color: var(--sub); font-size: .8rem; cursor: pointer; }
-.slider-row { display: flex; align-items: center; gap: 8px; margin: 10px 0 2px; font-size: .8rem; }
-.slider-row input[type=range] { flex: 1; accent-color: var(--green); }
-.slider-row .val { width: 30px; text-align: right; color: var(--green); font-weight: 700; }
+/* 标签 / 提示 */
+.tag{display:inline-flex;align-items:center;gap:4px;background:var(--card2);border:1px solid var(--line);border-radius:var(--r-pill);padding:3px 10px;font-size:.68rem;color:var(--sub);font-weight:600}
+.tag.neural{border-color:rgba(134,105,158,.4);color:#B9A8CC;background:rgba(134,105,158,.08)}
+.tag.fire{border-color:rgba(193,106,78,.4);color:#C57E62;background:rgba(193,106,78,.08)}
+.hint{color:var(--sub);font-size:.76rem;line-height:1.65}
+.hint b{color:var(--txt);font-weight:700}
 
-/* ---------- 结果区 ---------- */
-.prob-bar { display: flex; height: 38px; border-radius: 10px; overflow: hidden; font-size: .78rem; font-weight: 700; margin: 8px 0 4px; }
-.prob-bar div { display: flex; align-items: center; justify-content: center; color: #07101f; min-width: 36px; transition: width .6s; }
-.prob-bar .w { background: linear-gradient(135deg,#ff2d2e,#ff7a1f); color: #fff; }
-.prob-bar .d { background: #7a5c50; color: #fff; }
-.prob-bar .l { background: linear-gradient(135deg,#1f6fd4,#3da5ff); color: #fff; }
-.prob-legend { display: flex; justify-content: space-between; font-size: .75rem; color: var(--sub); }
-.score-big { text-align: center; margin: 14px 0 6px; }
-.score-big .s { font-size: 2.6rem; font-weight: 900; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.score-big .lab { color: var(--sub); font-size: .75rem; }
-.top-scores { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
-.top-scores span { background: var(--card2); border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px; font-size: .8rem; }
-.top-scores b { color: var(--gold); }
-table.heat { border-collapse: collapse; margin: 8px auto; }
-table.heat td, table.heat th { width: 38px; height: 30px; text-align: center; font-size: .68rem; border: 1px solid rgba(38,50,89,.4); }
-table.heat th { color: var(--sub); font-weight: 600; background: var(--bg2); }
-.factors div { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px dashed var(--line); font-size: .83rem; }
-.factors div:last-child { border: none; }
-.factors .v { font-weight: 700; }
-.pos { color: var(--green); } .neg { color: var(--red); } .neu { color: var(--sub); }
-canvas.radar { display: block; margin: 0 auto; }
-.radar-legend { display: flex; justify-content: center; gap: 18px; font-size: .78rem; margin-top: 6px; }
-.radar-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; }
+/* 按钮 */
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:15px;border:none;border-radius:var(--r-md);
+  background:var(--grad-fire);color:#fff;font-size:1.04rem;font-weight:800;letter-spacing:.06em;cursor:pointer;box-shadow:var(--sh-glow);font-family:var(--sans)}
+.btn:active{transform:scale(.985)}
+.btn.ghost{background:var(--card2);color:var(--txt);border:1px solid var(--line);box-shadow:none;font-weight:700;letter-spacing:.02em}
+.btn[disabled]{opacity:.5}
+.btn .ic{font-size:1.15em}
 
-/* ---------- AI 区 ---------- */
-.ai-out { font-size: .88rem; line-height: 1.8; }
-.ai-out h2 { font-size: .95rem; color: var(--green); margin: 14px 0 4px; border-left: 3px solid var(--green); padding-left: 8px; }
-.ai-out strong { color: var(--gold); }
-.ai-quote { background: rgba(255,211,77,.10); border: 1px solid var(--gold); border-radius: 12px;
-  padding: 12px; margin-top: 12px; font-size: .95rem; text-align: center; font-style: italic; }
-.ai-quote b { color: var(--gold); }
-.cursor { display: inline-block; width: 8px; height: 16px; background: var(--green); animation: blink .8s infinite; vertical-align: -2px; }
-@keyframes blink { 50% { opacity: 0; } }
-.fuse-note { font-size: .75rem; color: var(--sub); margin-top: 6px; text-align: center; }
+/* 对阵选择 */
+.vs-row{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px}
+.team-pick{text-align:center}
+.team-pick .flag{font-size:2.7rem;line-height:1.1;filter:drop-shadow(0 4px 10px rgba(0,0,0,.4))}
+.team-pick .meta{font-size:.66rem;color:var(--sub);margin-top:5px;min-height:1em;font-family:var(--mono)}
+.vs-badge{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-style:italic;font-size:1.05rem;color:var(--txt);
+  background:radial-gradient(120% 120% at 30% 20%,#322318,#201810);border:1px solid var(--line-2);position:relative}
+.vs-badge::after{content:"";position:absolute;inset:-1px;border-radius:50%;padding:1px;background:var(--grad-fire);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+select,input[type=text],input[type=password],textarea{width:100%;background:var(--bg2);color:var(--txt);border:1px solid var(--line);
+  border-radius:var(--r-md);padding:11px 12px;font-size:.92rem;outline:none;font-family:var(--sans);margin-top:8px}
+select:focus,input:focus,textarea:focus{border-color:var(--amber)}
+.seg{display:flex;gap:8px;margin:var(--s4) 0 0;background:var(--bg2);padding:4px;border-radius:var(--r-md);border:1px solid var(--line)}
+.seg button{flex:1;padding:10px;border-radius:10px;border:none;background:transparent;color:var(--sub);font-size:.85rem;font-weight:600;cursor:pointer;
+  font-family:var(--sans);display:flex;align-items:center;justify-content:center;gap:6px}
+.seg button.on{background:linear-gradient(135deg,rgba(193,106,78,.18),rgba(194,122,82,.10));color:#CC8A6C;font-weight:800;box-shadow:0 1px 0 var(--hair) inset;border:1px solid rgba(193,106,78,.3)}
+details.adv{margin:var(--s4) 0 0}
+details.adv summary{color:var(--sub);font-size:.8rem;cursor:pointer;display:flex;align-items:center;gap:7px;list-style:none}
+details.adv summary::-webkit-details-marker{display:none}
+.slider-row{display:flex;align-items:center;gap:10px;margin:14px 0 2px;font-size:.8rem}
+.slider-row span:first-child{width:54px;color:var(--sub)}
+.slider-row input[type=range]{flex:1;accent-color:var(--amber);height:4px}
+.slider-row .val{width:34px;text-align:right;color:var(--amber);font-weight:700}
 
-/* ---------- 赛程 ---------- */
-.day-h { color: var(--gold); font-size: .82rem; font-weight: 700; margin: 16px 0 6px; }
-.fx { display: flex; align-items: center; background: var(--card); border: 1px solid var(--line);
-  border-radius: 12px; padding: 10px 12px; margin: 6px 0; cursor: pointer; gap: 6px; }
-.fx:active { background: var(--card2); }
-.fx .t { color: var(--sub); font-size: .7rem; width: 44px; flex-shrink: 0; }
-.fx .nm { flex: 1; font-size: .86rem; text-align: right; }
-.fx .nm2 { flex: 1; font-size: .86rem; }
-.fx .mid { font-weight: 800; color: var(--purple); font-size: .8rem; padding: 0 4px; }
-.fx .res { color: var(--gold); font-weight: 800; }
-.fx.today { border-color: var(--green); }
-.fx .g { font-size: .62rem; color: var(--sub); background: var(--bg2); border-radius: 6px; padding: 1px 5px; margin-left: 4px; }
+/* 概率条 */
+.prob{margin:6px 0 2px}
+.prob-bar{display:flex;height:30px;border-radius:9px;overflow:hidden;gap:2px;background:var(--bg2);padding:2px}
+.prob-bar div{display:flex;align-items:center;justify-content:center;min-width:30px;border-radius:7px;transition:width .7s cubic-bezier(.2,.8,.2,1)}
+.prob-bar .w{background:var(--grad-fire)}
+.prob-bar .d{background:linear-gradient(135deg,#6E5650,#8A6C62)}
+.prob-bar .l{background:var(--grad-cool)}
+.prob-legend{display:flex;justify-content:space-between;margin-top:11px}
+.prob-legend .lg{display:flex;align-items:center;gap:7px}
+.prob-legend .lg i{width:9px;height:9px;border-radius:3px}
+.prob-legend .lg.w i{background:var(--fire)} .prob-legend .lg.d i{background:#8A6C62} .prob-legend .lg.l i{background:var(--cool)}
+.prob-legend .lg .t{font-size:.72rem;color:var(--sub)}
+.prob-legend .lg .p{font-size:.84rem;font-weight:800}
+.prob-legend .lg.w .p{color:#CC8A6C} .prob-legend .lg.d .p{color:var(--sub)} .prob-legend .lg.l .p{color:#9197AE}
+.score-big{text-align:center;margin:var(--s5) 0 var(--s2);padding:14px 0;border-top:1px dashed var(--line);border-bottom:1px dashed var(--line)}
+.score-big .s{font-size:3rem;font-weight:800;line-height:1;background:var(--grad-fire);-webkit-background-clip:text;background-clip:text;color:transparent}
+.score-big .lab{color:var(--sub);font-size:.72rem;margin-top:7px;letter-spacing:.04em}
+.top-scores{display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin-top:var(--s4)}
+.top-scores span{display:inline-flex;align-items:center;gap:6px;background:var(--card2);border:1px solid var(--line);border-radius:9px;padding:5px 10px;font-size:.78rem;color:var(--sub)}
+.top-scores span .sc{font-weight:700;color:var(--txt)}
+.top-scores span b{color:var(--amber);font-weight:700}
+.fuse-note{font-size:.74rem;color:var(--sub);margin-top:10px;text-align:center;line-height:1.6}
 
-/* ---------- 模拟 ---------- */
-.rank-row { display: flex; align-items: center; gap: 8px; margin: 7px 0; font-size: .85rem; }
-.rank-row .n { width: 22px; color: var(--sub); font-size: .75rem; }
-.rank-row .f { width: 28px; text-align: center; }
-.rank-row .nm { width: 76px; }
-.rank-row .bar { flex: 1; height: 16px; background: var(--bg2); border-radius: 8px; overflow: hidden; }
-.rank-row .bar i { display: block; height: 100%; background: var(--grad); border-radius: 8px; transition: width .8s; }
-.rank-row .pc { width: 48px; text-align: right; font-weight: 700; color: var(--green); font-size: .8rem; }
-.progress { height: 8px; background: var(--bg2); border-radius: 4px; overflow: hidden; margin: 10px 0; }
-.progress i { display: block; height: 100%; background: var(--grad); width: 0; transition: width .2s; }
+/* 热力图 */
+.heat-wrap{overflow-x:auto;padding:2px}
+table.heat{border-collapse:separate;border-spacing:3px;margin:6px auto}
+table.heat td,table.heat th{width:40px;height:30px;text-align:center;font-size:.66rem;border-radius:7px;font-family:var(--mono)}
+table.heat th{color:var(--faint);font-weight:600;background:transparent}
+table.heat th.corner{color:var(--sub)}
+table.heat td{color:#F4E3D8;position:relative;transition:transform .15s}
+table.heat td.peak{box-shadow:0 0 0 2px var(--gold),0 0 16px -2px var(--gold);font-weight:800;color:#fff;z-index:1}
+.heat-cap{text-align:center;font-size:.72rem;color:var(--sub);margin-top:12px}
+.heat-cap b{color:var(--txt)}
 
-/* ---------- 设置弹窗 ---------- */
-.mask { position: fixed; inset: 0; background: rgba(5,8,18,.78); z-index: 90; display: none; }
-.mask.on { display: flex; align-items: flex-end; justify-content: center; }
-.sheet { background: var(--bg2); border-radius: 20px 20px 0 0; width: 100%; max-width: 560px;
-  max-height: 86vh; overflow-y: auto; padding: 20px 18px calc(20px + env(safe-area-inset-bottom)); }
-.sheet h3 { margin-bottom: 4px; }
-.sheet .row { margin: 12px 0; }
-.sheet label { font-size: .8rem; color: var(--sub); display: block; margin-bottom: 6px; }
-.key-status { font-size: .8rem; margin-top: 8px; min-height: 1.2em; }
-.modal-x { float: right; background: none; border: none; color: var(--sub); font-size: 1.3rem; cursor: pointer; }
+/* 雷达 */
+canvas.radar{display:block;margin:0 auto}
+.radar-legend{display:flex;justify-content:center;gap:22px;font-size:.78rem;margin-top:8px}
+.radar-legend span{display:inline-flex;align-items:center;gap:6px;color:var(--sub)}
+.radar-legend i{width:10px;height:10px;border-radius:3px}
 
-/* ---------- 模型说明 ---------- */
-.doc { font-size: .87rem; line-height: 1.85; color: #c6cee6; }
-.doc h4 { color: var(--green); margin: 16px 0 6px; }
-.doc code { background: var(--bg2); border-radius: 6px; padding: 2px 6px; font-size: .8rem; color: var(--gold); }
-.formula { background: var(--bg2); border: 1px solid var(--line); border-radius: 10px; padding: 10px;
-  text-align: center; font-family: Georgia, serif; font-style: italic; margin: 8px 0; color: var(--gold); font-size: .9rem; }
+/* 因子 */
+.factors div{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,238,230,.04);font-size:.82rem}
+.factors div:last-child{border:none}
+.factors .k{color:var(--sub);display:flex;align-items:center;gap:7px}
+.factors .v{font-weight:700;font-family:var(--mono)}
+.factors .v.pos{color:var(--amber)} .factors .v.neg{color:var(--cool)} .factors .v.neu{color:var(--sub)}
 
-footer { text-align: center; color: var(--sub); font-size: .68rem; padding: 24px 14px 10px; line-height: 1.8; }
-footer b { color: var(--green); }
+/* AI 区 */
+.ai-out{font-size:.86rem;line-height:1.8}
+.ai-out h2{font-size:.92rem;color:var(--amber);margin:14px 0 5px;display:flex;align-items:center;gap:7px;border-left:3px solid var(--amber);padding-left:8px}
+.ai-out strong{color:var(--gold)}
+.ai-quote{background:linear-gradient(135deg,rgba(168,108,134,.10),rgba(134,105,158,.10));border:1px solid rgba(134,105,158,.35);border-radius:var(--r-md);padding:14px;margin-top:14px;text-align:center}
+.ai-quote .q{font-size:.96rem;font-weight:700;color:#fff}
+.ai-quote b{color:var(--gold)}
+.ai-quote .m{font-size:.74rem;color:#B9A8CC;margin-top:6px}
+.cursor{display:inline-block;width:8px;height:16px;background:var(--amber);animation:blink .8s infinite;vertical-align:-2px}
+@keyframes blink{50%{opacity:0}}
 
-/* ---------- 自动演示模式 ---------- */
-.demo-mode nav { display: none; }
-.demo-mode { padding-bottom: 0; }
-.demo-mode .gear { display: none; }
-#demoStart { position: fixed; inset: 0; z-index: 200; background: rgba(10,4,6,.92);
-  display: flex; align-items: center; justify-content: center; backdrop-filter: blur(6px); }
-#demoStart .ds-card { text-align: center; padding: 30px; }
-#demoStart .ds-vs { font-size: 3rem; letter-spacing: 4px; }
-#demoStart .ds-vs b { font-style: italic; font-size: 2rem;
-  background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
-#demoStart .ds-name { font-size: 1.2rem; font-weight: 800; margin: 12px 0 22px; }
-#demoStart .ds-hint { color: var(--sub); font-size: .8rem; margin-top: 12px; }
-#demoCap { position: fixed; left: 0; right: 0; bottom: 8%; z-index: 190; text-align: center;
-  padding: 0 24px; opacity: 0; transition: opacity .3s; pointer-events: none; }
-#demoCap.show { opacity: 1; }
-#demoCap { font-size: 1.55rem; font-weight: 900; font-style: italic; color: #fff;
-  text-shadow: 0 2px 12px rgba(0,0,0,.85), 0 0 30px rgba(255,61,46,.5); }
-.demo-mode .prob-bar div { transition: width 1s cubic-bezier(.2,.8,.2,1); }
-@keyframes demopulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
-.demo-mode #bigScore { animation: demopulse 1.2s ease 2; }
+/* 赛程 */
+.day-h{display:flex;align-items:center;gap:9px;color:var(--gold);font-size:.8rem;font-weight:700;margin:18px 0 8px;letter-spacing:.02em}
+.day-h .dot{width:5px;height:5px;border-radius:50%;background:var(--gold)}
+.fx{display:grid;grid-template-columns:46px 1fr auto 1fr;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);padding:11px 12px;margin:7px 0;cursor:pointer;gap:6px}
+.fx:active{background:var(--card2)}
+.fx .t{color:var(--faint);font-size:.66rem;font-family:var(--mono);line-height:1.4}
+.fx .nm{font-size:.84rem;text-align:right;font-weight:500}
+.fx .nm2{font-size:.84rem;font-weight:500}
+.fx .mid{font-weight:800;color:#9197AE;font-size:.78rem;padding:0 8px;font-family:var(--mono)}
+.fx .mid.res{color:var(--gold);background:rgba(217,194,140,.10);border-radius:8px;padding:3px 8px}
+.fx.today{border-color:rgba(201,163,104,.5);box-shadow:0 0 0 1px rgba(201,163,104,.12)}
+.fx .g{grid-column:1/-1;justify-self:end;font-size:.6rem;color:var(--faint);background:var(--bg2);border-radius:5px;padding:1px 6px}
+
+/* 模拟排行 */
+.rank-row{display:grid;grid-template-columns:24px 30px 78px 1fr 54px;align-items:center;gap:9px;margin:9px 0;font-size:.84rem}
+.rank-row .n{color:var(--faint);font-size:.74rem;font-family:var(--mono);text-align:center}
+.rank-row.top .n{color:var(--gold);font-weight:700}
+.rank-row .f{text-align:center;font-size:1.1rem}
+.rank-row .nm{font-weight:500}
+.rank-row .bar{height:14px;background:var(--bg2);border-radius:var(--r-pill);overflow:hidden}
+.rank-row .bar i{display:block;height:100%;border-radius:var(--r-pill);background:var(--grad-fire);transition:width .9s cubic-bezier(.2,.8,.2,1)}
+.rank-row:not(.top) .bar i{background:linear-gradient(135deg,#7C5A52,#A0766A)}
+.rank-row .pc{text-align:right;font-weight:800;color:var(--amber);font-family:var(--mono);font-size:.82rem}
+.rank-row:not(.top) .pc{color:var(--sub)}
+.progress{height:7px;background:var(--bg2);border-radius:var(--r-pill);overflow:hidden;margin:var(--s4) 0 0}
+.progress i{display:block;height:100%;background:var(--grad-fire);width:0;border-radius:var(--r-pill);transition:width .2s}
+
+/* 模型战绩 */
+.track-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:var(--s4) 0}
+.ts{background:var(--card2);border:1px solid var(--line);border-radius:var(--r-md);padding:13px 8px 11px;text-align:center;position:relative;overflow:hidden}
+.ts::before{content:"";position:absolute;left:0;top:0;width:100%;height:2px;background:var(--grad-fire);opacity:.5}
+.ts.dim::before{background:var(--line-2);opacity:.6}
+.ts.good::before{background:var(--grad-fire);opacity:1}
+.ts .tv{font-size:1.3rem;font-weight:800;color:var(--amber);font-family:var(--mono);line-height:1}
+.ts.dim .tv{color:var(--sub)}
+.ts.good .tv{color:#D2AE66}
+.ts .tl{font-size:.66rem;color:var(--sub);margin-top:6px;letter-spacing:.02em}
+.ts .tl b{color:var(--amber);font-weight:700}
+.track-list{margin-top:var(--s2)}
+.tr{display:flex;align-items:center;gap:9px;padding:9px 0;border-bottom:1px solid rgba(255,238,230,.04);font-size:.8rem}
+.tr .tm{flex:1}
+.tr .tm .sc{font-family:var(--mono);font-weight:700;color:var(--txt);margin:0 3px}
+.tr .tp{color:var(--faint);font-size:.7rem;white-space:nowrap}
+.tr .to{width:42px;text-align:right;font-weight:800;display:flex;align-items:center;justify-content:flex-end;gap:3px}
+.tr.hit .to{color:var(--amber)} .tr.miss .to{color:var(--faint)}
+
+/* 方法论文档 */
+.doc{font-size:.85rem;line-height:1.85;color:#D8C4BA}
+.doc h4{color:var(--amber);margin:16px 0 6px;font-size:.9rem;display:flex;align-items:center;gap:7px}
+.doc code{background:var(--bg2);border-radius:6px;padding:2px 6px;font-size:.78rem;color:var(--gold);font-family:var(--mono)}
+.formula{background:var(--bg2);border:1px solid var(--line);border-radius:var(--r-md);padding:12px;text-align:center;font-family:var(--mono);margin:10px 0;color:var(--gold);font-size:.86rem}
+
+/* 底部导航（固定） */
+nav{position:fixed;bottom:0;left:0;right:0;background:rgba(18,10,12,.88);backdrop-filter:blur(16px);border-top:1px solid var(--line);display:flex;z-index:50}
+nav button{flex:1;background:none;border:none;color:var(--faint);padding:9px 0 max(11px,env(safe-area-inset-bottom));font-size:.68rem;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:4px;font-family:var(--sans);position:relative}
+nav button .ic{font-size:1.4rem}
+nav button.on{color:var(--amber)}
+nav button.on::before{content:"";position:absolute;top:0;width:26px;height:2.5px;border-radius:3px;background:var(--grad-fire)}
+
+footer{text-align:center;color:var(--faint);font-size:.66rem;padding:24px 16px 14px;line-height:1.9}
+footer b{color:var(--amber)}
+
+/* 设置弹窗（底部抽屉） */
+.mask{position:fixed;inset:0;background:rgba(8,5,4,.78);z-index:90;display:none}
+.mask.on{display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--bg2);border-radius:var(--r-xl) var(--r-xl) 0 0;width:100%;max-width:560px;max-height:86vh;overflow-y:auto;
+  padding:20px 18px calc(20px + env(safe-area-inset-bottom));border-top:1px solid var(--line)}
+.sheet h3{margin-bottom:4px;font-weight:800;display:flex;align-items:center;gap:8px}
+.sheet .row{margin:12px 0}
+.sheet label{font-size:.8rem;color:var(--sub);display:block;margin-bottom:6px}
+.key-status{font-size:.8rem;margin-top:8px;min-height:1.2em}
+.modal-x{float:right;background:none;border:none;color:var(--sub);font-size:1.3rem;cursor:pointer}
+
+/* 自动演示模式（录屏用） */
+.demo-mode nav{display:none}
+.demo-mode{padding-bottom:0}
+.demo-mode .gear{display:none}
+#demoStart{position:fixed;inset:0;z-index:200;background:rgba(10,7,5,.93);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px)}
+#demoStart .ds-card{text-align:center;padding:30px}
+#demoStart .ds-vs{font-size:3rem;letter-spacing:4px}
+#demoStart .ds-vs b{font-style:italic;font-size:2rem;background:var(--grad-fire);-webkit-background-clip:text;background-clip:text;color:transparent}
+#demoStart .ds-name{font-size:1.2rem;font-weight:800;margin:12px 0 22px}
+#demoStart .ds-hint{color:var(--sub);font-size:.8rem;margin-top:12px}
+#demoCap{position:fixed;left:0;right:0;bottom:8%;z-index:190;text-align:center;padding:0 24px;opacity:0;transition:opacity .3s;pointer-events:none;
+  font-size:1.55rem;font-weight:900;font-style:italic;color:#fff;text-shadow:0 2px 12px rgba(0,0,0,.85),0 0 30px rgba(193,106,78,.5)}
+#demoCap.show{opacity:1}
+.demo-mode .prob-bar div{transition:width 1s cubic-bezier(.2,.8,.2,1)}
+@keyframes demopulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+.demo-mode #bigScore{animation:demopulse 1.2s ease 2}
 </style>
 </head>
 <body>
 
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-swords" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 17.5 4 7V3h4l10.5 10.5"/><path d="m13 19 6-6"/><path d="m16 16 4 4"/><path d="m19 21 2-2"/><path d="M9.5 17.5 20 7V3h-4L5.5 13.5"/><path d="m11 19-6-6"/><path d="m8 16-4 4"/><path d="m5 21-2-2"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="3"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></symbol>
+  <symbol id="i-trophy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M9 19h6M10 14.5V19M14 14.5V19"/></symbol>
+  <symbol id="i-model" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="6" r="2"/><circle cx="5" cy="18" r="2"/><circle cx="12" cy="12" r="2.2"/><circle cx="19" cy="6" r="2"/><circle cx="19" cy="18" r="2"/><path d="M6.8 7 10 11M6.8 17 10 13M14 11l3.2-4M14 13l3.2 4"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></symbol>
+  <symbol id="i-flame" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1 3-2 4-2 7a2 2 0 0 0 4 0c0-1 0-1.5-.3-2 2 1.5 3.3 3.7 3.3 6a5 5 0 0 1-10 0c0-3.5 3-5 5-11z"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V4M4 20h16M8 16v-3M12 16V8M16 16v-6"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="i-radar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 21 9v6l-9 6-9-6V9z"/><path d="M12 3v18M3 9l9 3 9-3M3 15l9-3 9 3"/></symbol>
+  <symbol id="i-calc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2.5"/><path d="M8 7h8M8 12h2M8 16h2M14 12h2M14 16h2"/></symbol>
+  <symbol id="i-bot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="11" rx="3"/><path d="M12 8V4M9 3h6"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/><path d="M2 12v3M22 12v3"/></symbol>
+  <symbol id="i-tune" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h10M18 8h2M4 16h2M10 16h10"/><circle cx="16" cy="8" r="2.2"/><circle cx="8" cy="16" r="2.2"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="m8.2 10.8 7.6-3.6M8.2 13.2l7.6 3.6"/></symbol>
+  <symbol id="i-dice" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="8.5" cy="8.5" r="1.1"/><circle cx="15.5" cy="8.5" r="1.1"/><circle cx="12" cy="12" r="1.1"/><circle cx="8.5" cy="15.5" r="1.1"/><circle cx="15.5" cy="15.5" r="1.1"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12 5 5L20 6"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6z"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-octo" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M13 28C13 16 35 16 35 28"/><path d="M14 29c-2.6 3-4.6 4.6-3.6 8 .4 1.4 2 1.4 2.4 0"/><path d="M19 31c-1.3 4-2.9 6-1 9"/><path d="M24 31.5v9.5"/><path d="M29 31c1.3 4 2.9 6 1 9"/><path d="M34 29c2.6 3 4.6 4.6 3.6 8-.4 1.4-2 1.4-2.4 0"/><circle cx="20" cy="24" r="1.7" fill="currentColor" stroke="none"/><circle cx="28" cy="24" r="1.7" fill="currentColor" stroke="none"/></symbol>
+</svg>
+
 <div class="wrap">
   <header>
-    <div class="logo"><span class="oct">🐙</span> <span class="grad">硅基章鱼</span></div>
-    <div class="tagline">碳基看球，硅基算球 · 🧠 深度学习预测引擎</div>
-    <div class="live-chip">⚽ 2026 世界杯 · 开战中 LIVE</div>
-    <div class="dl-chip">🧠 神经网络模型 · 约 5 万场比赛训练</div>
-    <button class="gear" id="gearBtn" onclick="openSettings()">⚙️ AI</button>
+    <button class="gear" id="gearBtn" onclick="openSettings()" title="AI 设置"><svg class="ic"><use href="#i-gear"/></svg></button>
+    <div class="brand">
+      <div class="mark"><svg><use href="#i-octo"/></svg></div>
+      <div class="name"><span class="grad">硅基章鱼</span></div>
+    </div>
+    <div class="tagline">碳基看球，硅基算球 · 深度学习预测引擎</div>
+    <div class="chips">
+      <span class="chip live"><span class="dot"></span>2026 世界杯 · 开战中</span>
+      <span class="chip neural"><svg class="ic"><use href="#i-model"/></svg>神经网络 · 约 5 万场训练</span>
+    </div>
   </header>
 
   <!-- ============ 页1：预测 ============ -->
   <div class="page on" id="pg-predict">
     <div class="card">
-      <h3>⚔️ 选择对阵</h3>
+      <h3><span class="icc fire"><svg class="ic"><use href="#i-swords"/></svg></span>选择对阵</h3>
       <div class="vs-row">
-        <div class="side team-pick">
+        <div class="team-pick">
           <div class="flag" id="flagA">🏳️</div>
           <select id="selA" onchange="onPick()"></select>
           <div class="meta" id="metaA"></div>
         </div>
-        <div class="vs">VS</div>
-        <div class="side team-pick">
+        <div class="vs-badge">VS</div>
+        <div class="team-pick">
           <div class="flag" id="flagB">🏳️</div>
           <select id="selB" onchange="onPick()"></select>
           <div class="meta" id="metaB"></div>
         </div>
       </div>
-      <div class="mode-row">
+      <div class="seg">
         <button id="mGroup" class="on" onclick="setMode(false)">小组赛</button>
-        <button id="mKO" onclick="setMode(true)">淘汰赛（含点球）</button>
+        <button id="mKO" onclick="setMode(true)">淘汰赛 · 含点球</button>
       </div>
       <details class="adv">
-        <summary>🎚️ 高级：临场状态调整（默认用内置评估值）</summary>
-        <div class="slider-row"><span id="sligA">A队</span><input type="range" id="formA" min="30" max="99" oninput="document.getElementById('valA').textContent=this.value"><span class="val" id="valA">-</span></div>
-        <div class="slider-row"><span id="sligB">B队</span><input type="range" id="formB" min="30" max="99" oninput="document.getElementById('valB').textContent=this.value"><span class="val" id="valB">-</span></div>
+        <summary><svg class="ic"><use href="#i-tune"/></svg>高级：临场状态调整（默认用内置评估值）<svg class="ic" style="margin-left:auto;width:16px"><use href="#i-chevron"/></svg></summary>
+        <div class="slider-row"><span id="sligA">A队</span><input type="range" id="formA" min="30" max="99" oninput="document.getElementById('valA').textContent=this.value"><span class="val num" id="valA">-</span></div>
+        <div class="slider-row"><span id="sligB">B队</span><input type="range" id="formB" min="30" max="99" oninput="document.getElementById('valB').textContent=this.value"><span class="val num" id="valB">-</span></div>
         <div class="hint">状态值影响有效 Elo（±50 封顶），可根据最新伤病/首发情报手动微调。</div>
       </details>
-      <button class="btn" onclick="predict()">🔥 开赛！立即预测</button>
+      <div style="height:14px"></div>
+      <button class="btn" onclick="predict()"><svg class="ic"><use href="#i-flame"/></svg>开赛！立即预测</button>
     </div>
 
     <div id="resultArea" style="display:none">
       <div class="card">
-        <h3>📊 预测结果 <span class="tag" style="border-color:var(--fire);color:#ff8a5e">🧠 深度学习模型</span></h3>
-        <div class="prob-bar"><div class="w" id="barW"></div><div class="d" id="barD"></div><div class="l" id="barL"></div></div>
-        <div class="prob-legend"><span id="legW"></span><span id="legD"></span><span id="legL"></span></div>
-        <div class="score-big"><div class="s" id="bigScore">-</div><div class="lab">模型最可能比分</div></div>
+        <h3><span class="icc amber"><svg class="ic"><use href="#i-chart"/></svg></span>预测结果<span class="tag neural tt-right"><svg class="ic"><use href="#i-model"/></svg>深度学习</span></h3>
+        <div class="prob">
+          <div class="prob-bar"><div class="w" id="barW"></div><div class="d" id="barD"></div><div class="l" id="barL"></div></div>
+          <div class="prob-legend">
+            <div class="lg w"><i></i><div><div class="t" id="legW">主胜</div><div class="p num" id="pW">-</div></div></div>
+            <div class="lg d"><i></i><div style="text-align:center"><div class="t" id="legD">平局</div><div class="p num" id="pD">-</div></div></div>
+            <div class="lg l"><i></i><div style="text-align:right"><div class="t" id="legL">客胜</div><div class="p num" id="pL">-</div></div></div>
+          </div>
+        </div>
+        <div class="score-big"><div class="s num" id="bigScore">-</div><div class="lab">模型最可能比分</div></div>
         <div class="top-scores" id="topScores"></div>
         <div id="koLine" class="fuse-note"></div>
-        <p class="hint" style="margin-top:8px">⚽ 足球单场变数大，概率仅供参考，不构成竞彩建议。模型的长期真实战绩与校准见底部「🔬 模型」页 📊。</p>
+        <p class="hint" style="margin-top:14px">⚽ 足球单场变数大，概率仅供参考，不构成竞彩建议。模型长期真实战绩与校准见底部「模型」页 📊。</p>
       </div>
 
       <div class="card">
-        <h3>🌡️ 比分概率热力图</h3>
-        <div style="overflow-x:auto"><table class="heat" id="heatTable"></table></div>
-        <div class="hint" style="text-align:center">行 = <span id="heatA"></span>进球 · 列 = <span id="heatB"></span>进球 · 颜色越亮概率越高</div>
+        <h3><span class="icc fire"><svg class="ic"><use href="#i-grid"/></svg></span>比分概率热力图</h3>
+        <div class="heat-wrap"><table class="heat" id="heatTable"></table></div>
+        <div class="heat-cap">行 = <b id="heatA"></b>进球 · 列 = <b id="heatB"></b>进球 · 越亮概率越高</div>
       </div>
 
       <div class="card">
-        <h3>🕸️ 六维对比雷达</h3>
-        <canvas class="radar" id="radarCv" width="320" height="280"></canvas>
+        <h3><span class="icc cool"><svg class="ic"><use href="#i-radar"/></svg></span>六维对比雷达</h3>
+        <canvas class="radar" id="radarCv" width="320" height="290"></canvas>
         <div class="radar-legend" id="radarLegend"></div>
       </div>
 
       <div class="card">
-        <h3>🧮 修正因子明细 <span class="tag">透明可复现</span></h3>
+        <h3><span class="icc amber"><svg class="ic"><use href="#i-calc"/></svg></span>修正因子明细<span class="tag tt-right">透明可复现</span></h3>
         <div class="factors" id="factorList"></div>
       </div>
 
       <div class="card" id="aiCard">
-        <h3>🤖 AI 战术深度分析 <span class="tag" id="aiTag">未连接</span></h3>
+        <h3><span class="icc neural"><svg class="ic"><use href="#i-bot"/></svg></span>AI 战术深度分析<span class="tag neural tt-right" id="aiTag">未连接</span></h3>
         <div id="aiIdle">
           <p class="hint" style="margin-bottom:10px">连接国产大模型（DeepSeek / Kimi / 智谱 / 通义 / MiniMax），解锁阵型相克、教练斗法、关键对位分析，并对统计概率做有界修正（±8%）。</p>
           <textarea id="intelBox" rows="2" placeholder="（可选）粘贴最新情报：首发名单、伤病、天气……AI 会纳入分析"></textarea>
@@ -276,7 +386,7 @@ footer b { color: var(--green); }
         <div id="aiFuse"></div>
       </div>
 
-      <button class="btn" style="margin:14px 0" onclick="makeCard()">📸 生成小红书分享卡片</button>
+      <button class="btn" style="margin:14px 0" onclick="makeCard()"><svg class="ic"><use href="#i-share"/></svg>生成小红书分享卡片</button>
       <div id="cardBox" style="display:none;text-align:center">
         <img id="cardImg" style="width:75%;border-radius:14px;border:1px solid var(--line)" alt="分享卡片">
         <p class="hint" style="margin-top:8px">长按图片保存 / 右键另存，发小红书 📕</p>
@@ -287,8 +397,8 @@ footer b { color: var(--green); }
   <!-- ============ 页2：赛程 ============ -->
   <div class="page" id="pg-fixtures">
     <div class="card" style="margin-top:12px">
-      <h3>📅 完整赛程（北京时间）</h3>
-      <p class="hint">点击任意对阵直接生成预测 · 🟢 = 今日比赛 · 金色 = 已赛结果</p>
+      <h3><span class="icc amber"><svg class="ic"><use href="#i-cal"/></svg></span>完整赛程<span class="tag tt-right">北京时间</span></h3>
+      <p class="hint">点击任意对阵直接生成预测 · <b style="color:var(--amber)">金色</b> = 已赛结果 · 🟢 = 今日</p>
     </div>
     <div id="fxList"></div>
   </div>
@@ -296,16 +406,16 @@ footer b { color: var(--green); }
   <!-- ============ 页3：冠军模拟 ============ -->
   <div class="page" id="pg-sim">
     <div class="card" style="margin-top:12px">
-      <h3>🏆 冠军模拟器</h3>
-      <p class="hint" style="margin-bottom:10px">蒙特卡洛法完整模拟整届世界杯（已赛场次锁定真实比分）：72 场小组赛 → 32 强 → 决赛，重复一万届，统计每队夺冠频率。</p>
+      <h3><span class="icc amber"><svg class="ic"><use href="#i-trophy"/></svg></span>冠军模拟器</h3>
+      <p class="hint" style="margin-bottom:14px">蒙特卡洛法完整模拟整届世界杯（已赛场次锁定真实比分）：72 场小组赛 → 32 强 → 决赛，重复一万届，统计每队夺冠频率。</p>
       <button class="btn" id="simBtn" onclick="runSim()">🎲 模拟 10000 届世界杯</button>
       <div class="progress" id="simProg" style="display:none"><i id="simProgBar"></i></div>
     </div>
     <div class="card" id="simResult" style="display:none">
-      <h3>👑 夺冠概率排行 <span class="tag" id="simMeta"></span></h3>
+      <h3><span class="icc fire"><svg class="ic"><use href="#i-trophy"/></svg></span>夺冠概率排行<span class="tag tt-right" id="simMeta"></span></h3>
       <div id="rankList"></div>
-      <div style="height:10px"></div>
-      <button class="btn ghost" onclick="makeSimCard()">📸 生成夺冠榜分享卡片</button>
+      <div style="height:12px"></div>
+      <button class="btn ghost" onclick="makeSimCard()"><svg class="ic"><use href="#i-share"/></svg>生成夺冠榜分享卡片</button>
       <div id="simCardBox" style="display:none;text-align:center;margin-top:10px">
         <img id="simCardImg" style="width:75%;border-radius:14px;border:1px solid var(--line)" alt="夺冠榜卡片">
         <p class="hint" style="margin-top:8px">长按保存，发小红书 📕</p>
@@ -315,29 +425,15 @@ footer b { color: var(--green); }
 
   <!-- ============ 页4：模型说明 ============ -->
   <div class="page" id="pg-doc">
-    <style>
-      .track-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
-      .ts{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:10px 6px;text-align:center}
-      .ts .tv{font-size:1.12rem;font-weight:800;color:var(--green)}
-      .ts .tv.dim{color:var(--sub)}
-      .ts .tl{font-size:.7rem;color:var(--sub);margin-top:3px}
-      .track-list{margin-top:6px}
-      .tr{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:.82rem}
-      .tr .tm{flex:1}
-      .tr .tp{color:var(--sub);font-size:.74rem;white-space:nowrap}
-      .tr .to{width:48px;text-align:right;font-weight:800}
-      .tr.hit .to{color:var(--green)}
-      .tr.miss .to{color:var(--sub)}
-    </style>
     <div class="card" id="trackCard" style="margin-top:12px">
-      <h3>📊 模型战绩 · 实战回测 <span class="tag">无未来信息</span></h3>
+      <h3><span class="icc amber"><svg class="ic"><use href="#i-chart"/></svg></span>模型战绩 · 实战回测<span class="tag tt-right">无未来信息</span></h3>
       <p class="hint">按赛程顺序、<b>仅用每场之前的赛果</b>预测每一场已赛比赛（不含该场及之后任何信息），如实统计——这是诚实衡量模型的尺子，也杜绝「事后诸葛」。</p>
       <div class="track-grid" id="trackStats"></div>
       <div class="track-list" id="trackList"></div>
       <p class="hint" style="margin-top:10px">⚽ 单场足球变数极大（红牌、点球、门框、裁判），任何模型单场命中率天花板约 50–55%。<b>看模型能否长期跑赢「抛硬币」（随机 33%、logloss≈1.10）、以及概率是否校准</b>，比纠结单场对错更有意义。以上数字均为真实回测，不挑不藏。</p>
     </div>
     <div class="card doc" style="margin-top:12px">
-      <h3>🔬 预测模型方法论</h3>
+      <h3><span class="icc neural"><svg class="ic"><use href="#i-model"/></svg></span>预测模型方法论</h3>
       <h4>① Elo 评分体系</h4>
       <p>采用世界足球 Elo 评分体系（国际象棋起源的实力量化方法，每场赛后按胜负、比分差、赛事权重动态更新，比 FIFA 排名更灵敏）。关键改进：球队 Elo 与下文神经网络<b>同源同标度</b>——由约 5 万场历史国际比赛的同一套时序 Elo 统一算出（赛前基线 <code id="docEloDate"></code>），让训练时见到的评分和预测时输入的评分严格一致。两队相遇时的胜负期望：</p>
       <div class="formula">W<sub>e</sub> = 1 / (1 + 10<sup>−Δ/400</sup>)</div>
@@ -346,7 +442,7 @@ footer b { color: var(--green); }
       <p>每当一场比赛踢完，模型立刻按 Elo 公式更新双方评分：<code>新Elo = 旧Elo + K×净胜球权重×(实际结果 − 期望)</code>（K=60）。<b>赢强队加分多、赢弱旅加分少</b>——例如韩国 2-1 力克同档捷克，实时 Elo +25；墨西哥 2-0 完胜实力较弱的南非，仅 +12；而澳大利亚 2-0 爆冷胜土耳其，一举 +54。同时由实战积分与净胜球重算「近期状态」，与赛前评估各占一半。于是赛事越往后，预测越贴合球队的真实当下状态，每场结果都会反映到后续所有预测与冠军概率里。</p>
       <h4>② 深度学习神经网络模型 🧠</h4>
       <p>这是本预测引擎的核心、也是与普通「Elo→进球」预测最大的不同：我们用 <b>约 5 万场历史国际比赛（1872 起至今）离线训练了一个深度神经网络</b>，输入双方实时 Elo、近期状态、主客场、赛事级别等特征，由网络直接学习并输出两队的期望进球 λ——比任何固定公式都更贴合真实进球分布，能自动学到「攻强守松」与「铁桶阵」的差异。</p>
-      <div class="formula" style="text-align:left;font-style:normal">🧠 网络结构：输入 7 维特征 → 隐藏层(16) → 隐藏层(8) → 输出 λ<sub>主</sub>, λ<sub>客</sub><br>📚 训练样本：<span id="mdSamples">17,861</span> 场正式比赛（1998 年后，已剔除友谊赛减噪）　训练目标：泊松最大似然<br>🎯 留出回测（2022+ 真实比赛）：胜平负 logloss <b style="color:var(--green)" id="mdLL">0.887</b>，优于同特征传统公式 <span id="mdBase">0.899</span></div>
+      <div class="formula" style="text-align:left;font-style:normal">🧠 网络结构：输入 7 维特征 → 隐藏层(16) → 隐藏层(8) → 输出 λ<sub>主</sub>, λ<sub>客</sub><br>📚 训练样本：<span id="mdSamples">17,861</span> 场正式比赛（1998 年后，已剔除友谊赛减噪）　训练目标：泊松最大似然<br>🎯 留出回测（2022+ 真实比赛）：胜平负 logloss <b style="color:var(--amber)" id="mdLL">0.887</b>，优于同特征传统公式 <span id="mdBase">0.899</span></div>
       <p>这是<b>判别式预测模型</b>——只输出概率数字，不生成任何文字、图像或内容。由网络输出还派生出每队的<b>进攻指数 / 防守指数</b>（0–99），随真实赛果实时更新。λ 生成 9×9 比分概率矩阵 → 胜/平/负与最可能比分；淘汰赛 λ×0.90，平局按点球模型分配晋级。</p>
       <h4>③ Dixon-Coles 低比分修正</h4>
       <p>经典泊松模型会低估 0-0/1-1 等低比分。Dixon & Coles (1997) 提出对四个低比分格子做相关性修正，本模型取 ρ = −0.13。</p>
@@ -365,7 +461,7 @@ footer b { color: var(--green); }
   </div>
 
   <footer>
-    🐙 硅基章鱼 · 碳基看球，硅基算球<br>
+    <svg class="octo-sm"><use href="#i-octo"/></svg> 硅基章鱼 · 碳基看球，硅基算球<br>
     数据基线：Elo <span id="ftElo"></span> · FIFA排名 <span id="ftFifa"></span> · 小红书 <b>@碳化硅SiC</b><br>
     预测结果仅供娱乐参考，不构成任何竞彩建议。理性看球，热爱足球。
   </footer>
@@ -373,17 +469,17 @@ footer b { color: var(--green); }
 
 <!-- ============ 底部导航 ============ -->
 <nav>
-  <button class="on" id="nav0" onclick="go(0)"><span class="ic">⚔️</span>预测</button>
-  <button id="nav1" onclick="go(1)"><span class="ic">📅</span>赛程</button>
-  <button id="nav2" onclick="go(2)"><span class="ic">🏆</span>冠军模拟</button>
-  <button id="nav3" onclick="go(3)"><span class="ic">🔬</span>模型</button>
+  <button class="on" id="nav0" onclick="go(0)"><svg class="ic"><use href="#i-swords"/></svg>预测</button>
+  <button id="nav1" onclick="go(1)"><svg class="ic"><use href="#i-cal"/></svg>赛程</button>
+  <button id="nav2" onclick="go(2)"><svg class="ic"><use href="#i-trophy"/></svg>冠军模拟</button>
+  <button id="nav3" onclick="go(3)"><svg class="ic"><use href="#i-model"/></svg>模型</button>
 </nav>
 
 <!-- ============ 设置弹窗 ============ -->
 <div class="mask" id="mask" onclick="if(event.target===this)closeSettings()">
   <div class="sheet">
     <button class="modal-x" onclick="closeSettings()">✕</button>
-    <h3>🤖 AI 大模型连接</h3>
+    <h3><svg class="ic"><use href="#i-bot"/></svg> AI 大模型连接</h3>
     <p class="hint">填入任意一家的 API Key 即可解锁 AI 战术分析。推荐 DeepSeek（注册即送额度，无需信用卡）。Key 仅保存在你自己的浏览器里。</p>
     <div class="row">
       <label>渠道</label>
@@ -394,7 +490,7 @@ footer b { color: var(--green); }
       <select id="modelSel"></select>
     </div>
     <div class="row">
-      <label>API Key（<a id="keyUrl" href="#" target="_blank" style="color:var(--green)">去申请 →</a>）</label>
+      <label>API Key（<a id="keyUrl" href="#" target="_blank" style="color:var(--amber)">去申请 →</a>）</label>
       <input type="password" id="keyInput" placeholder="粘贴你的 API Key">
       <div class="key-status" id="keyStatus"></div>
     </div>
@@ -404,10 +500,10 @@ footer b { color: var(--green); }
   </div>
 </div>
 
-<script src="core/data.js?v=20260617-1"></script>
-<script src="core/model.js?v=20260617-1"></script>
-<script src="core/engine.js?v=20260617-1"></script>
-<script src="core/llm.js?v=20260617-1"></script>
+<script src="core/data.js?v=20260616-3"></script>
+<script src="core/model.js?v=20260616-3"></script>
+<script src="core/engine.js?v=20260616-3"></script>
+<script src="core/llm.js?v=20260616-3"></script>
 <script>
 "use strict";
 var D = WC_DATA, E = Engine, L = LLM;
@@ -470,20 +566,20 @@ function renderTrackRecord() {
     { v: bt.n, l: "已回测(场)" },
     { v: Math.round(bt.topHitRate * 100) + "%", l: "最看好命中" },
     { v: bt.scoreHit + "/" + bt.n, l: "比分命中" },
-    { v: bt.logloss.toFixed(3), l: "logloss" + (beat ? " ✓优" : ""), dim: !beat },
-    { v: bt.coinLogloss.toFixed(2), l: "抛硬币基准", dim: true },
+    { v: bt.logloss.toFixed(3), l: (beat ? "<b>logloss ✓优</b>" : "logloss"), cls: beat ? "good" : "dim" },
+    { v: bt.coinLogloss.toFixed(2), l: "抛硬币基准", cls: "dim" },
     { v: bt.brier.toFixed(3), l: "Brier" }
   ];
   document.getElementById("trackStats").innerHTML = stats.map(function (s) {
-    return '<div class="ts"><div class="tv' + (s.dim ? " dim" : "") + '">' + s.v + '</div><div class="tl">' + s.l + '</div></div>';
+    return '<div class="ts' + (s.cls ? " " + s.cls : "") + '"><div class="tv num">' + s.v + '</div><div class="tl">' + s.l + '</div></div>';
   }).join("");
   var TR = { W: "主胜", D: "平局", L: "客胜" };
   document.getElementById("trackList").innerHTML = bt.rounds.slice(-16).reverse().map(function (r) {
     var h = D.teams[r.h], a = D.teams[r.a];
     return '<div class="tr ' + (r.hit ? "hit" : "miss") + '">'
-      + '<span class="tm">' + h.flag + h.zh + ' <b>' + r.gh + '-' + r.ga + '</b> ' + a.zh + a.flag + '</span>'
+      + '<span class="tm">' + h.flag + h.zh + ' <span class="sc">' + r.gh + '-' + r.ga + '</span> ' + a.zh + a.flag + '</span>'
       + '<span class="tp">看好' + TR[r.top] + ' ' + Math.round(r.topP * 100) + '%</span>'
-      + '<span class="to">' + (r.hit ? "✓" : "✗") + (r.scoreHit ? " 🎯" : "") + '</span></div>';
+      + '<span class="to"><svg class="ic"><use href="#i-' + (r.hit ? "check" : "x") + '"/></svg>' + (r.scoreHit ? " 🎯" : "") + '</span></div>';
   }).join("");
 }
 
@@ -644,16 +740,16 @@ function renderResult(a, b, p) {
   document.getElementById("barW").style.width = (p.pWin * 100) + "%";
   document.getElementById("barD").style.width = (p.pDraw * 100) + "%";
   document.getElementById("barL").style.width = (p.pLoss * 100) + "%";
-  document.getElementById("barW").textContent = pct(p.pWin);
-  document.getElementById("barD").textContent = pct(p.pDraw);
-  document.getElementById("barL").textContent = pct(p.pLoss);
   document.getElementById("legW").textContent = a.zh + " 胜";
   document.getElementById("legD").textContent = "平局";
   document.getElementById("legL").textContent = b.zh + " 胜";
+  document.getElementById("pW").textContent = pct(p.pWin);
+  document.getElementById("pD").textContent = pct(p.pDraw);
+  document.getElementById("pL").textContent = pct(p.pLoss);
   var top = p.topScores[0];
   document.getElementById("bigScore").textContent = top.a + " : " + top.b;
   document.getElementById("topScores").innerHTML = p.topScores.map(function (s) {
-    return "<span>" + s.a + "-" + s.b + " <b>" + pct(s.p) + "</b></span>";
+    return "<span><span class='sc num'>" + s.a + "-" + s.b + "</span><b class='num'>" + pct(s.p) + "</b></span>";
   }).join("");
   document.getElementById("koLine").textContent = p.knockout
     ? "淘汰赛晋级概率：" + a.zh + " " + pct(p.pAdvanceA) + "（点球模型 " + pct(p.pPenaltyA) + "） / " + b.zh + " " + pct(1 - p.pAdvanceA)
@@ -663,19 +759,20 @@ function renderResult(a, b, p) {
   var ht = document.getElementById("heatTable");
   document.getElementById("heatA").textContent = a.zh;
   document.getElementById("heatB").textContent = b.zh;
-  var maxP = 0;
-  for (var x = 0; x <= 5; x++) for (var y = 0; y <= 5; y++) maxP = Math.max(maxP, p.matrix[x][y]);
-  var html = "<tr><th>" + a.flag + "\\" + b.flag + "</th>";
+  var maxP = 0, peakX = 0, peakY = 0;
+  for (var x = 0; x <= 5; x++) for (var y = 0; y <= 5; y++) { if (p.matrix[x][y] > maxP) { maxP = p.matrix[x][y]; peakX = x; peakY = y; } }
+  var html = "<tr><th class='corner'>" + a.flag + "\\" + b.flag + "</th>";
   for (y = 0; y <= 5; y++) html += "<th>" + y + "</th>";
   html += "</tr>";
   for (x = 0; x <= 5; x++) {
     html += "<tr><th>" + x + "</th>";
     for (y = 0; y <= 5; y++) {
       var v = p.matrix[x][y], ratio = v / maxP;
-      var col = "rgba(255,61,46," + (ratio * 0.9).toFixed(2) + ")";
-      if (x < y) col = "rgba(61,165,255," + (ratio * 0.85).toFixed(2) + ")";
-      if (x === y) col = "rgba(255,211,77," + (ratio * 0.7).toFixed(2) + ")";
-      html += '<td style="background:' + col + '">' + (v * 100).toFixed(1) + "</td>";
+      var col = "rgba(193,106,78," + (ratio * 0.92).toFixed(2) + ")";   // 主胜：暖
+      if (x < y) col = "rgba(124,116,150," + (ratio * 0.85).toFixed(2) + ")"; // 客胜：冷紫
+      if (x === y) col = "rgba(201,180,124," + (ratio * 0.8).toFixed(2) + ")"; // 平：金
+      var pk = (x === peakX && y === peakY) ? " class='peak'" : "";
+      html += '<td' + pk + ' style="background:' + col + '">' + (v * 100).toFixed(1) + "</td>";
     }
     html += "</tr>";
   }
@@ -709,7 +806,7 @@ function renderResult(a, b, p) {
   );
   f.innerHTML = rows.map(function (r) {
     var cls = r[2] > 0 ? "pos" : (r[2] < 0 ? "neg" : "neu");
-    return "<div><span>" + r[0] + "</span><span class='v " + cls + "'>" + r[1] + "</span></div>";
+    return "<div><span class='k'>" + r[0] + "</span><span class='v " + cls + " num'>" + r[1] + "</span></div>";
   }).join("");
 }
 function fmtAdj(v) { return (v > 0 ? "+" : "") + v; }
@@ -726,7 +823,7 @@ function drawRadar(a, b) {
     return [cx + r * Math.cos(ang), cy + r * Math.sin(ang)];
   }
   // 网格
-  ctx.strokeStyle = "rgba(38,50,89,.8)"; ctx.fillStyle = "#8b97b8"; ctx.font = "11px sans-serif";
+  ctx.strokeStyle = "rgba(71,54,40,.9)"; ctx.fillStyle = "#8C7A68"; ctx.font = "11px sans-serif";
   for (var ring = 1; ring <= 4; ring++) {
     ctx.beginPath();
     for (var i = 0; i <= n; i++) { var q = pt(i % n, R * ring / 4); i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); }
@@ -738,7 +835,7 @@ function drawRadar(a, b) {
     ctx.textAlign = "center"; ctx.fillText(keys[i], ql[0], ql[1] + 4);
   }
   // 两队多边形
-  [[da, "255,77,46"], [db, "61,165,255"]].forEach(function (pair) {
+  [[da, "194,122,82"], [db, "134,105,158"]].forEach(function (pair) {
     var d = pair[0], col = pair[1];
     ctx.beginPath();
     for (var i = 0; i <= n; i++) {
@@ -750,7 +847,7 @@ function drawRadar(a, b) {
     ctx.strokeStyle = "rgb(" + col + ")"; ctx.lineWidth = 2; ctx.stroke();
   });
   document.getElementById("radarLegend").innerHTML =
-    '<span><i style="background:#ff4d2e"></i>' + a.zh + "</span><span><i style='background:#3da5ff'></i>" + b.zh + "</span>";
+    '<span><i style="background:#C27A52"></i>' + a.zh + "</span><span><i style='background:#86699E'></i>" + b.zh + "</span>";
 }
 
 /* ============ AI 分析 ============ */
@@ -831,16 +928,16 @@ function renderFixtures() {
   var html = "";
   Object.keys(byDay).forEach(function (day) {
     var isToday = day === todayStr;
-    html += '<div class="day-h">' + day.replace("-", " 月 ") + " 日" + (isToday ? " · 今天 🟢" : "") + "</div>";
+    html += '<div class="day-h"><span class="dot"></span>' + day.replace("-", " 月 ") + " 日" + (isToday ? " · 今天 🟢" : "") + "</div>";
     byDay[day].forEach(function (fx) {
       var a = D.teams[fx.h], b = D.teams[fx.a];
       var res = D.results[fx.n];
-      var mid = res ? '<span class="res">' + res[0] + " : " + res[1] + "</span>" : "VS";
+      var mid = res ? '<span class="mid res num">' + res[0] + " : " + res[1] + "</span>" : '<span class="mid">VS</span>';
       var time = fx.d.length > 5 ? fx.d.slice(6) : "已赛";
       html += '<div class="fx' + (isToday ? " today" : "") + '" onclick="fromFixture(\'' + fx.h + "','" + fx.a + "'," + (res ? "true" : "false") + ')">' +
         '<span class="t">' + time + "<br>" + fx.v + "</span>" +
         '<span class="nm">' + a.zh + " " + a.flag + "</span>" +
-        '<span class="mid">' + mid + "</span>" +
+        mid +
         '<span class="nm2">' + b.flag + " " + b.zh + "</span>" +
         '<span class="g">' + fx.g + "</span></div>";
     });
@@ -887,7 +984,7 @@ function renderSim() {
   document.getElementById("simMeta").textContent = "已模拟 " + N + " 届 · 已赛比分锁定";
   document.getElementById("rankList").innerHTML = rows.map(function (r, i) {
     var t = D.teams[r.c];
-    return '<div class="rank-row"><span class="n">' + (i + 1) + "</span><span class='f'>" + t.flag + "</span>" +
+    return '<div class="rank-row' + (i < 3 ? ' top' : '') + '"><span class="n">' + (i + 1) + "</span><span class='f'>" + t.flag + "</span>" +
       '<span class="nm">' + t.zh + "</span><span class='bar'><i style='width:" + (r.p / maxP * 100) + "%'></i></span>" +
       '<span class="pc">' + (r.p * 100).toFixed(1) + "%</span></div>";
   }).join("");
@@ -1064,7 +1161,7 @@ function saveKey() {
   st.innerHTML = '<span style="color:var(--gold)">验证中…</span>';
   L.verifyKey(providerId, key).then(function () {
     localStorage.setItem("sjzy_llm", JSON.stringify({ providerId: providerId, model: model, key: key }));
-    st.innerHTML = '<span style="color:var(--green)">✅ 验证成功，已保存（仅存本机浏览器）</span>';
+    st.innerHTML = '<span style="color:var(--amber)">✅ 验证成功，已保存（仅存本机浏览器）</span>';
     loadKeyUI();
     setTimeout(closeSettings, 900);
   }).catch(function (e) {
@@ -1082,12 +1179,13 @@ function loadKeyUI() {
   var gear = document.getElementById("gearBtn");
   var tag = document.getElementById("aiTag");
   if (cfg && cfg.key) {
-    gear.classList.add("on"); gear.textContent = "🤖 已连接";
+    gear.classList.add("on");
     tag.textContent = L.getProvider(cfg.providerId).name;
-    tag.style.color = "var(--green)";
+    tag.style.color = "var(--amber)";
   } else {
-    gear.classList.remove("on"); gear.textContent = "⚙️ AI";
+    gear.classList.remove("on");
     tag.textContent = "未连接";
+    tag.style.color = "";
   }
 }
 
