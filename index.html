@@ -295,6 +295,15 @@ footer b{color:var(--amber)}
 .tie .tmeta b{color:var(--amber)}
 .tie.pend{display:flex;align-items:center;gap:8px;color:var(--faint);font-size:.82rem}
 .tie.pend .tn{flex:1}.tie.pend .tn.r{text-align:right}
+/* 晋级概率分布热力表 */
+.dist-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table.dist{border-collapse:separate;border-spacing:2px;width:100%;font-size:.72rem}
+table.dist th{color:var(--sub);font-weight:700;font-size:.66rem;padding:4px 2px;text-align:center}
+table.dist th.dt-team{text-align:left;padding-left:4px}
+table.dist td{text-align:center;padding:6px 2px;border-radius:6px;color:var(--txt);min-width:40px}
+table.dist td.dt-team{text-align:left;color:var(--sub);font-weight:600;font-size:.74rem;background:none!important;white-space:nowrap;padding-left:4px;min-width:78px}
+table.dist td.dt-hot{font-weight:800;color:#fff}
+.dt-star{color:var(--gold)}
 </style>
 </head>
 <body>
@@ -495,6 +504,11 @@ footer b{color:var(--amber)}
       <div id="brNote"></div>
     </div>
     <div id="brChamp"></div>
+    <div class="card" id="brDistCard">
+      <h3><span class="icc neural"><svg class="ic"><use href="#i-model"/></svg></span>晋级概率分布<span class="tag tt-right" id="brDistMeta"></span></h3>
+      <p class="hint" style="margin-bottom:10px">蒙特卡洛模拟淘汰赛 8000 次，每队进各轮的概率（越亮越高）。</p>
+      <div class="dist-wrap"><table class="dist" id="brDistTable"></table></div>
+    </div>
     <div id="brRounds"></div>
     <div class="card"><p class="hint">晋级概率含 90 分钟+加时+点球（点球近似五五开微调）。淘汰赛各队已踢满 3 场，预测可信度高于小组赛首轮。仅供娱乐，理性看球。</p></div>
   </div>
@@ -540,10 +554,10 @@ footer b{color:var(--amber)}
   </div>
 </div>
 
-<script src="core/data.js?v=20260628-3"></script>
-<script src="core/model.js?v=20260628-3"></script>
-<script src="core/engine.js?v=20260628-3"></script>
-<script src="core/llm.js?v=20260628-3"></script>
+<script src="core/data.js?v=20260628-4"></script>
+<script src="core/model.js?v=20260628-4"></script>
+<script src="core/engine.js?v=20260628-4"></script>
+<script src="core/llm.js?v=20260628-4"></script>
 <script>
 "use strict";
 var D = WC_DATA, E = Engine, L = LLM;
@@ -758,6 +772,7 @@ function renderBracket() {
       '<div class="cb-team">' + c.flag + ' ' + c.zh + '</div>' +
       '<div class="cb-note">实时评分逐场推演 · 仅供娱乐</div></div>';
   } else champEl.innerHTML = "";
+  renderKoDist(b.champion);
   var html = "";
   b.rounds.forEach(function (r) {
     html += '<div class="card kr"><div class="kr-h">' + KR_NAME[r.name] + '</div>';
@@ -775,6 +790,26 @@ function renderBracket() {
     html += "</div>";
   });
   document.getElementById("brRounds").innerHTML = html;
+}
+
+/* ============ 晋级概率分布（蒙特卡洛热力表） ============ */
+function renderKoDist(detChamp) {
+  var kd = E.knockoutDistribution(D, 8000);
+  document.getElementById("brDistMeta").textContent = "模拟 " + kd.nSims + " 次";
+  var cols = [["r16", "16强"], ["qf", "8强"], ["sf", "4强"], ["final", "决赛"], ["champ", "夺冠"]];
+  var head = '<tr><th class="dt-team">球队</th>' + cols.map(function (c) { return "<th>" + c[1] + "</th>"; }).join("") + "</tr>";
+  var rows = kd.teams.map(function (t) {
+    var tm = D.teams[t.code];
+    var star = (t.code === detChamp) ? ' <span class="dt-star">★</span>' : "";
+    var tds = cols.map(function (c) {
+      var v = t[c[0]], a = Math.min(0.82, v * 0.82);
+      var pc = v >= 0.005 ? Math.round(v * 100) + "%" : "·";
+      var bold = c[0] === "champ" && v >= 0.10 ? " dt-hot" : "";
+      return '<td class="num' + bold + '" style="background:rgba(201,163,104,' + a.toFixed(2) + ')">' + pc + "</td>";
+    }).join("");
+    return '<tr><td class="dt-team">' + tm.flag + " " + tm.zh + star + "</td>" + tds + "</tr>";
+  }).join("");
+  document.getElementById("brDistTable").innerHTML = head + rows;
 }
 
 /* ============ 预测 ============ */

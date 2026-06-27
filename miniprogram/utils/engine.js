@@ -562,6 +562,53 @@
              projectedGroups: !st.allDone };
   }
 
+  /**
+   * 蒙特卡洛模拟淘汰赛（R32 对阵固定，逐场按晋级概率抽样），统计每队进各轮的概率。
+   * 返回 { teams:[{code, r16, qf, sf, final, champ}], nSims, projectedGroups }，按夺冠概率降序。
+   */
+  function knockoutDistribution(data, nSims) {
+    nSims = nSims || 8000;
+    var st = computeStandings(data, { project: true });
+    var live = st.live, ltCache = {};
+    function team(c) { if (!ltCache[c]) ltCache[c] = liveTeam(data.teams[c], live[c]); return ltCache[c]; }
+    var advCache = {};
+    function adv(h, a) { // h 晋级概率（含点球模型）
+      var k = h + "|" + a;
+      if (advCache[k] == null) advCache[k] = predictMatch(team(h), team(a), { knockout: true }).pAdvanceA;
+      return advCache[k];
+    }
+    // R32 对阵固定解析（真实抽签优先，否则投影出线）
+    var realR32 = data.knockoutActual && data.knockoutActual.r32;
+    var thirdIdx = { v: 0 };
+    function resolveSlot(slot) {
+      if (slot === "3RD") return st.bestThirds[thirdIdx.v++] || null;
+      var t = slot[0], rest = slot.slice(1);
+      if (t === "1") return st.firsts[rest] || null;
+      if (t === "2") return st.seconds[rest] || null;
+      return null;
+    }
+    var r32 = data.knockout.r32.map(function (m, i) {
+      return (realR32 && realR32[i]) ? [realR32[i].h, realR32[i].a] : [resolveSlot(m.h), resolveSlot(m.a)];
+    });
+    var reach = {};
+    function bump(c, key) { if (!reach[c]) reach[c] = { r16: 0, qf: 0, sf: 0, final: 0, champ: 0 }; reach[c][key]++; }
+    function flip(h, a) { return Math.random() < adv(h, a) ? h : a; }
+    var ko = data.knockout, slotN = function (s) { return parseInt(s.slice(1), 10); };
+    for (var s = 0; s < nSims; s++) {
+      var W = {};
+      ko.r32.forEach(function (m, i) { W[m.n] = flip(r32[i][0], r32[i][1]); bump(W[m.n], "r16"); });
+      ko.r16.forEach(function (m) { W[m.n] = flip(W[slotN(m.h)], W[slotN(m.a)]); bump(W[m.n], "qf"); });
+      ko.qf.forEach(function (m) { W[m.n] = flip(W[slotN(m.h)], W[slotN(m.a)]); bump(W[m.n], "sf"); });
+      ko.sf.forEach(function (m) { W[m.n] = flip(W[slotN(m.h)], W[slotN(m.a)]); bump(W[m.n], "final"); });
+      var f = ko.final; W[f.n] = flip(W[slotN(f.h)], W[slotN(f.a)]); bump(W[f.n], "champ");
+    }
+    var out = Object.keys(reach).map(function (c) {
+      var r = reach[c];
+      return { code: c, r16: r.r16 / nSims, qf: r.qf / nSims, sf: r.sf / nSims, final: r.final / nSims, champ: r.champ / nSims };
+    }).sort(function (a, b) { return b.champ - a.champ || b.final - a.final; });
+    return { teams: out, nSims: nSims, projectedGroups: !st.allDone };
+  }
+
   /** 六维雷达数据（0-100）：进攻/防守/状态/大赛经验/教练/阵容深度 */
   function radarData(t, data) {
     var eloNorm = clamp((t.elo - 1480) / (2240 - 1480) * 100, 5, 100);  // 适配训练同源 Elo 标度（48强约1576~2225）
@@ -658,6 +705,7 @@
     simulateTournament: simulateTournament,
     computeStandings: computeStandings,
     predictBracket: predictBracket,
+    knockoutDistribution: knockoutDistribution,
     computeLiveRatings: computeLiveRatings,
     backtestWC: backtestWC,
     configure: configure,
