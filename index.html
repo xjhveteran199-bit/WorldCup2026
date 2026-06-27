@@ -268,6 +268,33 @@ footer b{color:var(--amber)}
 .demo-mode .prob-bar div{transition:width 1s cubic-bezier(.2,.8,.2,1)}
 @keyframes demopulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
 .demo-mode #bigScore{animation:demopulse 1.2s ease 2}
+
+/* ---------- 淘汰赛对阵图 ---------- */
+.br-warn{font-size:.74rem;color:var(--gold);background:rgba(217,194,140,.08);border:1px solid rgba(217,194,140,.3);border-radius:10px;padding:8px 12px;margin-top:10px;line-height:1.6}
+.br-warn b{color:var(--txt)}
+.br-ok{font-size:.74rem;color:var(--amber);margin-top:10px}
+.champ-banner{background:radial-gradient(120% 130% at 50% 0%,#3a2a18,#241a10);border:1px solid var(--amber);border-radius:var(--r-lg);padding:18px 16px;margin:12px 0;text-align:center;box-shadow:0 6px 30px rgba(201,163,104,.18)}
+.champ-banner .cb-l{font-size:.74rem;color:var(--amber);letter-spacing:.08em;font-weight:700}
+.champ-banner .cb-team{font-size:1.7rem;font-weight:900;font-style:italic;margin:6px 0;color:var(--gold)}
+.champ-banner .cb-note{font-size:.66rem;color:var(--sub)}
+.kr{padding:14px 14px 6px}
+.kr-h{font-size:.8rem;font-weight:800;color:var(--amber);letter-spacing:.04em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--hair)}
+.tie{padding:9px 0;border-bottom:1px solid var(--hair)}
+.tie:last-child{border-bottom:none}
+.tie.champ{margin:0 -8px;padding:9px 8px;background:rgba(201,163,104,.06);border-radius:10px;border-bottom:1px solid transparent}
+.tie .tw{display:flex;align-items:center;gap:6px;font-size:.84rem}
+.tie .tn{flex:1;color:var(--sub);font-weight:600}
+.tie .tn.r{text-align:right}
+.tie .tn.win{color:var(--txt);font-weight:800}
+.tie .tvs{flex:none;color:var(--faint);font-size:.72rem;padding:0 6px}
+.tie .tbar{height:5px;background:var(--bg2);border-radius:3px;margin:6px 0 4px;overflow:hidden;display:flex}
+.tie .tbar i{height:100%;background:linear-gradient(90deg,var(--amber-2),var(--amber));border-radius:3px}
+.tie .tbar i.r{margin-left:auto;background:linear-gradient(90deg,var(--amber),var(--amber-2))}
+.tie.champ .tbar i{background:linear-gradient(90deg,var(--gold),var(--amber))}
+.tie .tmeta{font-size:.68rem;color:var(--sub);text-align:center}
+.tie .tmeta b{color:var(--amber)}
+.tie.pend{display:flex;align-items:center;gap:8px;color:var(--faint);font-size:.82rem}
+.tie.pend .tn{flex:1}.tie.pend .tn.r{text-align:right}
 </style>
 </head>
 <body>
@@ -460,6 +487,18 @@ footer b{color:var(--amber)}
     </div>
   </div>
 
+  <!-- ============ 页5：淘汰赛对阵图 ============ -->
+  <div class="page" id="pg-bracket">
+    <div class="card" style="margin-top:12px">
+      <h3><span class="icc fire"><svg class="ic"><use href="#i-trophy"/></svg></span>淘汰赛对阵图</h3>
+      <p class="hint">模型用各队<b>实时评分</b>推演 32 强 → 决赛全程：每场显示晋级概率，高亮预测晋级方，并标出冠军之路。</p>
+      <div id="brNote"></div>
+    </div>
+    <div id="brChamp"></div>
+    <div id="brRounds"></div>
+    <div class="card"><p class="hint">晋级概率含 90 分钟+加时+点球（点球近似五五开微调）。淘汰赛各队已踢满 3 场，预测可信度高于小组赛首轮。仅供娱乐，理性看球。</p></div>
+  </div>
+
   <footer>
     <svg class="octo-sm"><use href="#i-octo"/></svg> 硅基章鱼 · 碳基看球，硅基算球<br>
     数据基线：Elo <span id="ftElo"></span> · FIFA排名 <span id="ftFifa"></span> · 小红书 <b>@碳化硅SiC</b><br>
@@ -472,6 +511,7 @@ footer b{color:var(--amber)}
   <button class="on" id="nav0" onclick="go(0)"><svg class="ic"><use href="#i-swords"/></svg>预测</button>
   <button id="nav1" onclick="go(1)"><svg class="ic"><use href="#i-cal"/></svg>赛程</button>
   <button id="nav2" onclick="go(2)"><svg class="ic"><use href="#i-trophy"/></svg>冠军模拟</button>
+  <button id="nav4" onclick="go(4)"><svg class="ic"><use href="#i-trophy"/></svg>淘汰赛</button>
   <button id="nav3" onclick="go(3)"><svg class="ic"><use href="#i-model"/></svg>模型</button>
 </nav>
 
@@ -500,10 +540,10 @@ footer b{color:var(--amber)}
   </div>
 </div>
 
-<script src="core/data.js?v=20260628-2"></script>
-<script src="core/model.js?v=20260628-2"></script>
-<script src="core/engine.js?v=20260628-2"></script>
-<script src="core/llm.js?v=20260628-2"></script>
+<script src="core/data.js?v=20260628-3"></script>
+<script src="core/model.js?v=20260628-3"></script>
+<script src="core/engine.js?v=20260628-3"></script>
+<script src="core/llm.js?v=20260628-3"></script>
 <script>
 "use strict";
 var D = WC_DATA, E = Engine, L = LLM;
@@ -697,11 +737,44 @@ function setMode(ko) {
 }
 
 function go(i) {
-  ["pg-predict", "pg-fixtures", "pg-sim", "pg-doc"].forEach(function (p, j) {
-    document.getElementById(p).classList.toggle("on", i === j);
-  });
-  for (var j = 0; j < 4; j++) document.getElementById("nav" + j).classList.toggle("on", i === j);
+  var pages = { 0: "pg-predict", 1: "pg-fixtures", 2: "pg-sim", 3: "pg-doc", 4: "pg-bracket" };
+  Object.keys(pages).forEach(function (k) { document.getElementById(pages[k]).classList.toggle("on", i === +k); });
+  [0, 1, 2, 3, 4].forEach(function (j) { var n = document.getElementById("nav" + j); if (n) n.classList.toggle("on", i === j); });
+  if (i === 4) renderBracket();
   window.scrollTo(0, 0);
+}
+
+/* ============ 淘汰赛对阵图 ============ */
+var KR_NAME = { R32: "32 强 · Round of 32", R16: "16 强", QF: "8 强", SF: "4 强", F: "决赛" };
+function renderBracket() {
+  var b = E.predictBracket(D);
+  document.getElementById("brNote").innerHTML = b.projectedGroups
+    ? '<div class="br-warn">⚠️ 小组赛尚未全部结束，对阵为模型<b>预测出线</b>；官方抽签后将转为真实对阵。</div>'
+    : '<div class="br-ok">✓ 基于真实出线对阵推演</div>';
+  var champEl = document.getElementById("brChamp");
+  if (b.champion) {
+    var c = D.teams[b.champion];
+    champEl.innerHTML = '<div class="champ-banner"><div class="cb-l">🏆 模型预测冠军</div>' +
+      '<div class="cb-team">' + c.flag + ' ' + c.zh + '</div>' +
+      '<div class="cb-note">实时评分逐场推演 · 仅供娱乐</div></div>';
+  } else champEl.innerHTML = "";
+  var html = "";
+  b.rounds.forEach(function (r) {
+    html += '<div class="card kr"><div class="kr-h">' + KR_NAME[r.name] + '</div>';
+    r.ties.forEach(function (t) {
+      if (!t.h || !t.a) { html += '<div class="tie pend"><span class="tn">待定</span><span class="tvs">vs</span><span class="tn r">待定</span></div>'; return; }
+      var th = D.teams[t.h], ta = D.teams[t.a], hWin = t.winner === t.h, pct = Math.round(t.winnerProb * 100);
+      var cp = (t.winner === b.champion) ? " champ" : "";
+      html += '<div class="tie' + cp + '">' +
+        '<div class="tw"><span class="tn' + (hWin ? " win" : "") + '">' + th.flag + " " + th.zh + '</span>' +
+        '<span class="tvs num">' + t.topScore + '</span>' +
+        '<span class="tn r' + (!hWin ? " win" : "") + '">' + ta.zh + " " + ta.flag + '</span></div>' +
+        '<div class="tbar"><i class="' + (hWin ? "l" : "r") + '" style="width:' + pct + '%"></i></div>' +
+        '<div class="tmeta">' + (hWin ? th.zh : ta.zh) + ' 晋级 <b class="num">' + pct + '%</b></div></div>';
+    });
+    html += "</div>";
+  });
+  document.getElementById("brRounds").innerHTML = html;
 }
 
 /* ============ 预测 ============ */

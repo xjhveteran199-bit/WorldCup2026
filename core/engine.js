@@ -463,6 +463,105 @@
     return Math.random() - 0.5; // 同分同净胜同进球：随机（模拟用途足够）
   }
 
+  /* ============ 淘汰赛对阵图（确定性） ============ */
+
+  /**
+   * 确定性小组积分榜。opts.project: 未踢完的小组赛用模型最可能比分补全（标记 projected）。
+   * 返回 { groups, firsts, seconds, thirds, bestThirds, allDone, live, tableByGroup }
+   */
+  function computeStandings(data, opts) {
+    opts = opts || {};
+    var live = computeLiveRatings(data);
+    var S = {};
+    Object.keys(data.teams).forEach(function (c) {
+      S[c] = { code: c, group: data.teams[c].group, pts: 0, gf: 0, ga: 0, played: 0, projected: false };
+    });
+    data.fixtures.forEach(function (fx) {
+      if (fx.n > 72) return; // 仅小组赛
+      var res = data.results && data.results[fx.n], score, proj = false;
+      if (res) score = res;
+      else if (opts.project) {
+        var p = predictMatch(liveTeam(data.teams[fx.h], live[fx.h]), liveTeam(data.teams[fx.a], live[fx.a]),
+          { hostA: data.hosts.indexOf(fx.h) >= 0, hostB: data.hosts.indexOf(fx.a) >= 0 });
+        score = [p.topScores[0].a, p.topScores[0].b]; proj = true;
+      } else return;
+      applyResult(S[fx.h], S[fx.a], score[0], score[1]);
+      S[fx.h].played++; S[fx.a].played++;
+      if (proj) { S[fx.h].projected = true; S[fx.a].projected = true; }
+    });
+    // 确定性排序：分→净胜→进球→实时Elo→队码
+    function cmp(a, b) {
+      if (b.pts !== a.pts) return b.pts - a.pts;
+      var gdA = a.gf - a.ga, gdB = b.gf - b.ga;
+      if (gdB !== gdA) return gdB - gdA;
+      if (b.gf !== a.gf) return b.gf - a.gf;
+      var ea = live[a.code].elo, eb = live[b.code].elo;
+      if (eb !== ea) return eb - ea;
+      return a.code < b.code ? -1 : 1;
+    }
+    var groups = {};
+    Object.keys(S).forEach(function (c) { var g = S[c].group; (groups[g] = groups[g] || []).push(S[c]); });
+    var firsts = {}, seconds = {}, thirds = [];
+    Object.keys(groups).forEach(function (g) {
+      groups[g].sort(cmp);
+      firsts[g] = groups[g][0].code; seconds[g] = groups[g][1].code; thirds.push(groups[g][2]);
+    });
+    thirds.sort(cmp);
+    var bestThirds = thirds.slice(0, 8).map(function (t) { return t.code; });
+    var groupDone = Object.keys(data.results || {}).filter(function (n) { return +n <= 72; }).length >= 72;
+    return { groups: groups, firsts: firsts, seconds: seconds, thirds: thirds,
+             bestThirds: bestThirds, allDone: groupDone, live: live };
+  }
+
+  /**
+   * 预测整个淘汰赛对阵图。每场用实时评分 + knockout 预测算晋级概率，沿最可能晋级者推进。
+   * data.knockoutActual.r32 = [{n,h:"CODE",a:"CODE"},...] 若存在则用真实抽签（覆盖槽位解析）。
+   * 返回 { rounds:[{name,ties:[{n,h,a,pAdvanceH,winner,winnerProb,topScore,...}]}], champion, projectedGroups }
+   */
+  function predictBracket(data) {
+    var st = computeStandings(data, { project: true });
+    var live = st.live, ltCache = {};
+    function team(c) { if (!c) return null; if (!ltCache[c]) ltCache[c] = liveTeam(data.teams[c], live[c]); return ltCache[c]; }
+    var winners = {}, thirdIdx = { v: 0 };
+    var realR32 = data.knockoutActual && data.knockoutActual.r32;
+    function resolveSlot(slot) {
+      if (slot === "3RD") return st.bestThirds[thirdIdx.v++] || null;
+      var t = slot[0], rest = slot.slice(1);
+      if (t === "1") return st.firsts[rest] || null;
+      if (t === "2") return st.seconds[rest] || null;
+      if (t === "W") return winners[parseInt(rest, 10)] || null;
+      return null;
+    }
+    var rounds = [];
+    function playRound(name, ties, useReal) {
+      var out = [];
+      ties.forEach(function (m, i) {
+        var hc, ac;
+        if (useReal && realR32 && realR32[i]) { hc = realR32[i].h; ac = realR32[i].a; }
+        else { hc = resolveSlot(m.h); ac = resolveSlot(m.a); }
+        var tie = { n: m.n, h: hc, a: ac };
+        if (hc && ac && data.teams[hc] && data.teams[ac]) {
+          var p = predictMatch(team(hc), team(ac), { knockout: true });
+          tie.pAdvanceH = p.pAdvanceA;
+          tie.pWin = p.pWin; tie.pDraw = p.pDraw; tie.pLoss = p.pLoss;
+          tie.topScore = p.topScores[0].a + "-" + p.topScores[0].b;
+          var w = p.pAdvanceA >= 0.5 ? hc : ac;
+          winners[m.n] = w;
+          tie.winner = w; tie.winnerProb = (w === hc) ? p.pAdvanceA : (1 - p.pAdvanceA);
+        }
+        out.push(tie);
+      });
+      rounds.push({ name: name, ties: out });
+    }
+    playRound("R32", data.knockout.r32, true);
+    playRound("R16", data.knockout.r16, false);
+    playRound("QF", data.knockout.qf, false);
+    playRound("SF", data.knockout.sf, false);
+    playRound("F", [data.knockout.final], false);
+    return { rounds: rounds, champion: winners[data.knockout.final.n] || null,
+             projectedGroups: !st.allDone };
+  }
+
   /** 六维雷达数据（0-100）：进攻/防守/状态/大赛经验/教练/阵容深度 */
   function radarData(t, data) {
     var eloNorm = clamp((t.elo - 1480) / (2240 - 1480) * 100, 5, 100);  // 适配训练同源 Elo 标度（48强约1576~2225）
@@ -557,6 +656,8 @@
     predictMatch: predictMatch,
     teamIndices: teamIndices,
     simulateTournament: simulateTournament,
+    computeStandings: computeStandings,
+    predictBracket: predictBracket,
     computeLiveRatings: computeLiveRatings,
     backtestWC: backtestWC,
     configure: configure,

@@ -28,31 +28,57 @@ function standings() {
   });
 }
 
-// ---------- 2. 网格搜索 ELO_K × FORM_BLEND（walk-forward logloss/命中） ----------
+// 给每场标注「该两队较少一方的赛前已踢场次」(=轮次-1)。md>=1 即两队都至少踢过1场 → 淘汰赛代理子集
+function annotateMatchday(rounds) {
+  const played = {};
+  const byN = {};
+  D.fixtures.forEach(fx => { if (D.results[fx.n]) byN[fx.n] = fx; });
+  // 按赛程顺序推进
+  D.fixtures.filter(f => f.n <= 72 && D.results[f.n]).forEach(fx => {
+    const ph = played[fx.h] || 0, pa = played[fx.a] || 0;
+    const rec = rounds.find(r => r.n === fx.n);
+    if (rec) rec.prior = Math.min(ph, pa); // 两队中较少的赛前场次
+    played[fx.h] = ph + 1; played[fx.a] = pa + 1;
+  });
+}
+// 子集指标
+function metric(rounds, filt) {
+  const r = rounds.filter(filt);
+  if (!r.length) return null;
+  const hit = r.filter(x => x.hit).length;
+  const ll = r.reduce((s, x) => s + x.ll, 0) / r.length;
+  return { n: r.length, hit, hitRate: hit / r.length, ll };
+}
+
+// ---------- 2. 网格搜索 ELO_K × FORM_BLEND，目标=淘汰赛代理子集(两队均≥1场) logloss ----------
 function grid() {
-  const Ks = [40, 50, 60, 70, 80, 100];
-  const Bs = [0.3, 0.4, 0.5, 0.6, 0.7];
-  console.log("\n===== 网格搜索（66场 walk-forward，越低越好的 logloss / 越高越好的命中）=====");
-  console.log("ELO_K \\ BLEND   " + Bs.map(b => "b=" + b).join("        "));
+  const Ks = [15, 20, 25, 30, 35, 40, 50, 60];
+  const Bs = [0.3, 0.4, 0.5, 0.6];
+  console.log("\n===== 网格搜索（目标：淘汰赛代理子集 = 两队均≥1场后的比赛，越低越好 logloss / 越高越好命中）=====");
+  console.log("（淘汰赛各队已踢满3场，最贴近 prior≥1 的子集；首轮 prior=0 的冷启动噪声不纳入调参目标）");
+  console.log("ELO_K \\ BLEND   " + Bs.map(b => "b=" + b).join("       "));
   let best = null;
   Ks.forEach(k => {
     let line = "K=" + String(k).padEnd(4) + "  ";
     Bs.forEach(b => {
       E.configure({ ELO_K: k, FORM_BLEND: b });
       const bt = E.backtestWC(D);
-      const cell = bt.logloss.toFixed(3) + "/" + (bt.topHitRate * 100).toFixed(0) + "%";
-      line += cell.padEnd(13);
-      const score = bt.logloss; // 主目标：logloss
-      if (!best || score < best.ll) best = { k, b, ll: bt.logloss, hit: bt.topHitRate, sc: bt.scoreHit };
+      annotateMatchday(bt.rounds);
+      const ko = metric(bt.rounds, x => x.prior >= 1);     // 淘汰赛代理
+      const cell = ko.ll.toFixed(3) + "/" + (ko.hitRate * 100).toFixed(0) + "%";
+      line += cell.padEnd(12);
+      if (!best || ko.ll < best.ll) best = { k, b, ll: ko.ll, hit: ko.hitRate, n: ko.n };
     });
     console.log(line);
   });
-  console.log(`\n>>> 最优(按logloss): ELO_K=${best.k} FORM_BLEND=${best.b}  logloss=${best.ll.toFixed(4)} 命中=${(best.hit*100).toFixed(1)}% 比分=${best.sc}/66`);
+  console.log(`\n>>> 淘汰赛子集最优(按logloss): ELO_K=${best.k} FORM_BLEND=${best.b}  logloss=${best.ll.toFixed(4)} 命中=${(best.hit*100).toFixed(1)}% (n=${best.n})`);
 
-  // 对比：现行默认 60/0.5
-  E.configure({ ELO_K: 60, FORM_BLEND: 0.5 });
-  const base = E.backtestWC(D);
-  console.log(`    现行默认 60/0.5     logloss=${base.logloss.toFixed(4)} 命中=${(base.topHitRate*100).toFixed(1)}% 比分=${base.scoreHit}/66`);
+  // 对比现行默认 30/0.5（全集 + 淘汰赛子集）
+  E.configure({ ELO_K: 30, FORM_BLEND: 0.5 });
+  const base = E.backtestWC(D); annotateMatchday(base.rounds);
+  const baseAll = metric(base.rounds, () => true), baseKo = metric(base.rounds, x => x.prior >= 1);
+  console.log(`    现行默认 30/0.5  全集 logloss=${baseAll.ll.toFixed(4)} 命中=${(baseAll.hitRate*100).toFixed(1)}%  |  淘汰赛子集 logloss=${baseKo.ll.toFixed(4)} 命中=${(baseKo.hitRate*100).toFixed(1)}%`);
+  console.log("    注：KO_FACTOR(0.90)与点球模型只作用于 knockout:true，无WC淘汰赛赛果可回测，保持合理先验不动。");
   return best;
 }
 
