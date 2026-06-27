@@ -159,8 +159,19 @@
 
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
-  var ELO_K = 60;              // 世界杯赛事权重（FIFA/eloratings 体系）
-  var FORM_BLEND = 0.5;        // 实时状态 = 0.5×赛前评估 + 0.5×实战表现
+  // 实时评分更新步长。原 60（FIFA 标准赛事权重）对仅 3 场的小组赛过拟合：
+  // 66 场 walk-forward 调参显示 K≈30 最优——尤其在"已知前两轮、预测第三轮"
+  // 这一最贴近淘汰赛的情形下，命中率 61%→67%、logloss 0.850→0.831。
+  // 赛前 Elo 已是强先验，叠加的实时修正宜保守，避免被小样本带偏。
+  var ELO_K = 30;              // 实时评分步长（2026-06-28 据 66 场回测由 60 下调至 30）
+  var FORM_BLEND = 0.5;        // 实时状态 = 0.5×赛前评估 + 0.5×实战表现（仅影响展示，模型推理用 formRatio）
+
+  // 允许离线调参脚本覆盖实时评分超参（grid search 用），生产默认不调用
+  function configure(opts) {
+    if (!opts) return;
+    if (opts.ELO_K != null) ELO_K = opts.ELO_K;
+    if (opts.FORM_BLEND != null) FORM_BLEND = opts.FORM_BLEND;
+  }
 
   /**
    * 根据 data.results 里已结束的比赛，动态更新每支球队的实时 Elo 与近期状态。
@@ -548,6 +559,7 @@
     simulateTournament: simulateTournament,
     computeLiveRatings: computeLiveRatings,
     backtestWC: backtestWC,
+    configure: configure,
     liveTeam: liveTeam,
     radarData: radarData,
     sampleScore: sampleScore,
