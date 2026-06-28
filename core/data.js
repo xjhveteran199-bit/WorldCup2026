@@ -356,6 +356,17 @@ const WC_DATA = {
     ],
     sf: [ { n: 101, h: "W97", a: "W98" }, { n: 102, h: "W99", a: "W100" } ],
     final: { n: 104, h: "W101", a: "W102" }
+  },
+
+  // FIFA 官方真实 R32 抽签（2026-06-28 小组赛结束后公布）。引擎优先用此覆盖槽位解析，
+  // 顺序须与 knockout.r32 一致（n73→n88）。晋级树 r16/qf/sf/final 已与官方对阵图一致，无需改。
+  knockoutActual: {
+    r32: [
+      { h: "RSA", a: "CAN" }, { h: "GER", a: "PAR" }, { h: "NED", a: "MAR" }, { h: "BRA", a: "JPN" },
+      { h: "FRA", a: "SWE" }, { h: "CIV", a: "NOR" }, { h: "MEX", a: "ECU" }, { h: "ENG", a: "COD" },
+      { h: "USA", a: "BIH" }, { h: "BEL", a: "SEN" }, { h: "POR", a: "CRO" }, { h: "ESP", a: "AUT" },
+      { h: "SUI", a: "ALG" }, { h: "ARG", a: "CPV" }, { h: "COL", a: "GHA" }, { h: "AUS", a: "EGY" }
+    ]
   }
 };
 
